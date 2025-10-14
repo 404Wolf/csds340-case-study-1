@@ -25,6 +25,7 @@ def aucCV(features, labels):
 
 
 def predictTest(trainFeatures, trainLabels, testFeatures):
+    print(trainFeatures, trainLabels, testFeatures)
     # model = GaussianNB()
     model = make_pipeline(
         SimpleImputer(missing_values=-1, strategy="mean"), GaussianNB()
