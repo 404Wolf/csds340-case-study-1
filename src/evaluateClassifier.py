@@ -11,9 +11,7 @@ from sklearn.metrics import roc_auc_score, roc_curve
 from classifySpam import predictTest
 
 desiredFPR = 0.01
-trainDataFilename = "spamTrain1.csv"
-testDataFilename = "spamTrain2.csv"
-# testDataFilename = 'spamTest.csv'
+dataFilename = "spamTrain1.csv"
 
 
 def tprAtFPR(labels, outputs, desiredFPR):
@@ -31,14 +29,16 @@ def tprAtFPR(labels, outputs, desiredFPR):
     return tprAt, fpr, tpr
 
 
-trainData = np.loadtxt(trainDataFilename, delimiter=",")
-testData = np.loadtxt(testDataFilename, delimiter=",")
+# Load data and split into train/test using odd/even split
+data = np.loadtxt(dataFilename, delimiter=",")
+features = data[:, :-1]
+labels = data[:, -1]
 
-# Separate labels (last column) from training and test data
-trainFeatures = trainData[:, :-1]
-trainLabels = trainData[:, -1]
-testFeatures = testData[:, :-1]
-testLabels = testData[:, -1]
+# Arbitrarily choose all odd samples as train set and all even as test set
+trainFeatures = features[0::2, :]
+trainLabels = labels[0::2]
+testFeatures = features[1::2, :]
+testLabels = labels[1::2]
 
 testOutputs = predictTest(trainFeatures, trainLabels, testFeatures)
 aucTestRun = roc_auc_score(testLabels, testOutputs)

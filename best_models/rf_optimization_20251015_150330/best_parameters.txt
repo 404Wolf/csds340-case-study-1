@@ -1,0 +1,15 @@
+BEST RANDOM FOREST CONFIGURATION
+======================================================================
+
+Strategy: ExtraTrees
+CV AUC: 0.9022 ± 0.0241
+TPR @ FPR=0.01: 0.7279
+
+Parameters:
+  model__n_estimators: 500
+  model__min_samples_split: 5
+  model__min_samples_leaf: 2
+  model__max_features: sqrt
+  model__max_depth: None
+  model__criterion: entropy
+  model__class_weight: balanced
