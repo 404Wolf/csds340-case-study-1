@@ -15,7 +15,7 @@ from sklearn.metrics import roc_auc_score
 
 # Top 16 features by importance (peak TPR configuration)
 # Order: 19, 8, 3, 29, 4, 7, 6, 12, 28, 0, 17, 10, 9, 13, 18, 23
-# This gives: Best TPR@FPR=0.01: 0.7472, AUC: 0.9075
+
 BEST_FEATURES = [19, 8, 3, 29, 4, 7, 6, 12, 28, 0, 17, 10, 9, 13, 18, 23]
 
 
