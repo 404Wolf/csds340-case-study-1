@@ -8,10 +8,12 @@ Script used to evaluate classifier accuracy
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import roc_auc_score, roc_curve
-from classifySpam import predictTest
+from classifySpamBaseline import predictTest
 
 desiredFPR = 0.01
-dataFilename = "spamTrain1.csv"
+trainDataFilename = "spamTrain1.csv"
+testDataFilename = "spamTrain2.csv"
+# testDataFilename = 'spamTest.csv'
 
 
 def tprAtFPR(labels, outputs, desiredFPR):
@@ -29,16 +31,14 @@ def tprAtFPR(labels, outputs, desiredFPR):
     return tprAt, fpr, tpr
 
 
-# Load data and split into train/test using odd/even split
-data = np.loadtxt(dataFilename, delimiter=",")
-features = data[:, :-1]
-labels = data[:, -1]
+trainData = np.loadtxt(trainDataFilename, delimiter=",")
+testData = np.loadtxt(testDataFilename, delimiter=",")
 
-# Arbitrarily choose all odd samples as train set and all even as test set
-trainFeatures = features[0::2, :]
-trainLabels = labels[0::2]
-testFeatures = features[1::2, :]
-testLabels = labels[1::2]
+# Separate labels (last column) from training and test data
+trainFeatures = trainData[:, :-1]
+trainLabels = trainData[:, -1]
+testFeatures = testData[:, :-1]
+testLabels = testData[:, -1]
 
 testOutputs = predictTest(trainFeatures, trainLabels, testFeatures)
 aucTestRun = roc_auc_score(testLabels, testOutputs)

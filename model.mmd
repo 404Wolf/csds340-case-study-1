@@ -1,0 +1,11 @@
+flowchart LR
+  A[Input Data] --> B[TF-IDF Vectorization]
+  B --> C[Random Forest Feature Selection]
+  C --> D[Logistic Regression with L1]
+  D --> E[Final Sparse Model]
+
+  style A fill:#e0e0e0,stroke:#333,stroke-width:1px
+  style B fill:#d0f0ff,stroke:#3399cc,stroke-width:1px
+  style C fill:#d6ffd6,stroke:#33aa33,stroke-width:1px
+  style D fill:#fff3c4,stroke:#e6b800,stroke-width:1px
+  style E fill:#ffe0e0,stroke:#cc3333,stroke-width:1px
