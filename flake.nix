@@ -28,6 +28,7 @@
             matplotlib
             numpy
             pandas
+            sentence-transformers
           ]
         );
 
