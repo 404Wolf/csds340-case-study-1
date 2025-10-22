@@ -89,16 +89,16 @@ To build intuition for the data that we were working with, we began by doing PCA
   caption: [PCA analysis. We found no useful associations in the reduced dimensionality data. The components did not add disparate amounts of variance, and overall variance seems like a useless separating characteristic. Note we ran this on all of the data, since the goal here was to build intuition as a human observer and not proceed with the reduced data.],
 )
 
-This was not useful, so we proceeded to drop features using a random forest.
-
 We assumed that it was likely that words in the email would co-occur because of english semantics, like if "free" were in the email, it would be more likely "money" would also show up. Getting a baseline for how independent our features were would be useful for choosing a final approach, so we proceeded by simply doing an initial comparison of a naïve bayes and logistic regression, and were surprised by the results.
+
+We performed pre-processing to drop features, thinking that we may be able to improve results by focusing the classifier on features that have dependant relationships that naïve bayes could not account for well. However, even after dropping features, we found that logistic regression underperformed.
 
 #figure(
   image("images/bayes_vs_logistic.png"),
   caption: [On our data, naïve bayes seemed to perform marginally _better_ than logistic regression.],
 )
 
-Logistic regression performing _worse_ than naïve bayes was really surprising. This result led us to believe that the various attributes were more independent than we though (since one would indeed expect naïve bayes to perform better, or even optimally, if labels were more independent). The limitation of naïve bayes, though, and the only way we thought we'd be able to improve, is by dropping an assumption of our data having a linear decision boundary.
+This result led us to believe that the various attributes were more independent than we though (since one would indeed expect naïve bayes to perform better, or even optimally, if labels were more independent). The limitation of naïve bayes, though, and the only way we thought we'd be able to improve, is by dropping an assumption of our data having a linear decision boundary.
 
 We explored two different general strategies to allow for nonlinear boundaries. First, training classifiers specifically designed to discern nonlinear boundaries, and second, preprocessing techniques to augment our data in ways that would induce a nonlinear decision boundary.
 
@@ -106,3 +106,27 @@ We explored two different general strategies to allow for nonlinear boundaries. 
 // were to be deployed as a personalized spam filter for a user. What might be a
 // good choice of metric, and what are the implications on the classifier? How
 // might you solicit feedback from users to evaluate and improve your spam filter?
+
+= Personal Spam Filter
+
+Our current random forest with pre-processing might work for a customized spam classifier, but the fundamental issue is that we would have to retrain it every time.
+
+The current metrics that we are using, AUC, and TPR \@ FPR=1%, probably should be changed to handle this case.
+
+// Add the new metrics and why we think they are good new metrics
+
+== New metrics
+
+== Soliciting feedback
+
+To solicit feedback, we would likely want to build on prior art, and try to gather as much information as possible when a user "marks as spam" an email. Since it is a personalized filter, it is possible that they flag an email as spam not because _any_ of the frequencies. This introduces an immediate issue, since by just appending a document to our dataset and retraining would probably not work, since here may be unique words that tipped them off.
+
+To try to figure out what "tipped them off," we can look for important words with NLP methods. We are somewhat limited though, since we will not have data on the frequencies of new words. Because of this, to find words that probably tipped them off, we would have to use metrics like pointwise mutual information (PMI). However, we may have "important" words in the email that have nothing to do with whether it is spam or why they marked it as spam. If we keep all the previous documents, we would have dramatically higher storage requirements, but would be able to use more powerful methods like TF-IDF.
+
+== New Algorithms
+
+Under the assumption
+
+
+
+// To solve this, we will take advantage of 
