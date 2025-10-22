@@ -115,12 +115,29 @@ We explored two different general strategies to allow for nonlinear boundaries. 
 
  To chose the appropiate non lineaear classifier we trained a different classifiers such as HistGradientBoostingClassifier, RandomForestClassifier, KNeighborsClassifier and ExtraTreesClassifier. 
 
- We saw KNeighborsClassifier to substantially underperform due to the curse of dimensionality and not enough data in the dataset to have close enough neighbors to make a decision.
+ We saw KNeighborsClassifier to substantially underperform probably due to the curse of dimensionality and not enough data in the dataset to have close enough neighbors to make a decision.
 
- HistGradientBoostingClassifier had a considerably higher AUC in respect to RandomForestClassifier but was lagging behind in the TPR at FPR=0.01.
+ HistGradientBoostingClassifier had a similar performace to RandomForestClassifier but underperformed after optimizing the hyperparameters.
+ #figure(
+  image("images/model_performance_comparison.png")
+,caption: [Non-linear classifiers performance comparision],
+) 
 
  Finally we chose ExtraTreesClassifier as our final classifier over the RandomForestClassifier even if it had slightly lower resoults since we saw that our RF was overfitting the data from the validation curves.
  //! want a validation curves plot of RF agains the extratreesa
+ #figure(
+  image("images/learning_curves_comparison.png"),
+  caption: [Overfitting of the RandomForestClassifier and better fitting with the ExtraTreesClassifier],
+) 
+
+Once we selected the model roughly adjusting the hyperparameters as we tought best, we proceeded to apply an extensive grid search to find the best hyperparameters for the ExtraTreesClassifier.
+
+Key Parameters
+- `n_estimators`: 300-1000
+- `max_depth`: 10-30 or unlimited  
+- `max_features`: sqrt, log2, or 0.3-0.5
+- `class_weight`: balanced or none
+
 
 // Recommendations on how to evaluate the effectiveness of your algorithm if it
 // were to be deployed as a personalized spam filter for a user. What might be a

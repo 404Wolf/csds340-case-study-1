@@ -8,7 +8,7 @@ Model Performance Comparison Graphs
 
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassifier
+from sklearn.ensemble import HistGradientBoostingClassifier, RandomForestClassifier, ExtraTreesClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.impute import SimpleImputer
@@ -59,6 +59,19 @@ def create_model_pipeline(model_type):
             min_samples_split=10,
             min_samples_leaf=5,
             class_weight="balanced",
+            max_samples=0.8,
+            n_jobs=-1,
+            random_state=42,
+        )
+    elif model_type == "ExtraTrees":
+        model = ExtraTreesClassifier(
+            n_estimators=300,
+            max_features="sqrt",
+            max_depth=15,
+            min_samples_split=10,
+            min_samples_leaf=5,
+            class_weight="balanced",
+            bootstrap=True,
             max_samples=0.8,
             n_jobs=-1,
             random_state=42,
@@ -227,12 +240,11 @@ def create_learning_curves_graph():
     # Setup learning curve parameters
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
     train_sizes = np.linspace(0.1, 1.0, 10)
-    models = ["HGB", "RF", "KNN", "LogReg"]
-    colors = {"HGB": "blue", "RF": "green", "KNN": "red", "LogReg": "purple"}
+    models = ["RF", "ExtraTrees"]  # Only RF and Extra Trees for learning curves
+    colors = {"RF": "green", "ExtraTrees": "purple"}
     
-    # Create subplots for all models
-    fig, axes = plt.subplots(2, 2, figsize=(16, 12))
-    axes = axes.flatten()
+    # Create subplots for RF and Extra Trees (1 row, 2 columns)
+    fig, axes = plt.subplots(1, 2, figsize=(16, 6))
     
     for idx, model_type in enumerate(models):
         print(f"\nGenerating learning curve for {model_type}...")
@@ -270,10 +282,11 @@ def create_learning_curves_graph():
                        train_acc_mean + train_acc_std, alpha=0.2, color=color)
         
         # Validation accuracy
-        ax.plot(sizes, val_acc_mean, "o-", color="orange", linewidth=2.5,
+        val_color = "darkred" if model_type == "RF" else "darkblue"
+        ax.plot(sizes, val_acc_mean, "o-", color=val_color, linewidth=2.5,
                 label="Validation Accuracy", markersize=6)
         ax.fill_between(sizes, val_acc_mean - val_acc_std,
-                       val_acc_mean + val_acc_std, alpha=0.2, color="orange")
+                       val_acc_mean + val_acc_std, alpha=0.2, color=val_color)
         
         ax.set_xlabel("Number of Training Examples", fontsize=11)
         ax.set_ylabel("Accuracy", fontsize=11)
