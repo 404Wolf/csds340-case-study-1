@@ -27,9 +27,9 @@
 // parameters required by the algorithm. Communicate your approach in enough detail
 // for someone else to be able to implement and deploy your spam filtering system.
 
-To deploy our spam filtering system we choose to pre-process data with a mean imputation, feature select with a logistic regression classifier with L1 regularization, and train an ExtraTreesClassifier. The values of important parameters are shown below.
+To deploy our spam filtering system we choose to pre-process data with a median imputation, feature select with a logistic regression classifier with L1 regularization, and train an ExtraTreesClassifier. The values of important parameters are shown below.
 
-=== mean imputation
+=== median imputation
 ```python
 imputer = SimpleImputer(missing_values=-1, strategy="median")
 ```
