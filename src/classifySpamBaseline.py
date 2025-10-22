@@ -16,7 +16,8 @@ from sklearn.metrics import roc_auc_score
 # Top 16 features by importance (peak TPR configuration)
 # Order: 19, 8, 3, 29, 4, 7, 6, 12, 28, 0, 17, 10, 9, 13, 18, 23
 
-BEST_FEATURES = [19, 8, 3, 29, 4, 7, 6, 12, 28, 0, 17, 10, 9, 13, 18, 23]
+#BEST_FEATURES = [19, 8, 3, 29, 4, 7, 6, 12, 28, 0, 17, 10, 9, 13, 18, 23]
+BEST_FEATURES = [0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 12, 13, 14, 15, 16, 19, 20, 22, 23, 24, 25, 26, 27, 28, 29]
 
 
 def preprocess_features(features):
