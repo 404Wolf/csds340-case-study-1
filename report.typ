@@ -10,6 +10,8 @@
   size: 12pt,
 )
 
+#show link: set text(fill: blue)
+
 #align(center)[
   #text(size: 17pt, weight: "bold")[CSDS340 Case Study]
 
@@ -66,13 +68,22 @@ We also considered dropping features by pre-processing with a round of random fo
   caption: [The importance of various features. The drop off is mostly linear with two outliers. For the most part, features are decreasingly "important," with no exceptional strata for importance],
 )
 
-We also analyzed the Jaccard similarity of the dropped classes themselves, and found that in general about 60-70% of the classes that were dropped by either method were the same. The two methods did have their own classes that they would tend to drop, especially at increasing classes-dropped percentages, that were distinct from each other.
+We also analyzed the Jaccard similarity of the dropped classes themselves, and found that in general about 60-70% of the classes that were dropped by either method were the same (across different C values and \# important features dropped). The two methods did have their own classes that they would tend to drop, especially at increasing classes-dropped percentages, that were distinct from each other.
 
 Ultimately, we decided only to go with l1 regularization for dropping features, because we felt we would already encapsulate low importance values in our actual classifier -- a decision tree classifier.
 
 We found it interesting that, for logistic regression itself, we saw dramatically successful feature reduction with minimal loss to AUC. Performing l1 regularization on our data with $C=20$ removed *12* features while retaining *99.2%* of our AUC (in what seems to be a well-distributed decrease of AUC), for a simple logistic regression classifier.
 
 We knew that some words should have no influence on the final output. Words like "the," "and," and the like should not really have much influence on whether it is spam or not. To try to eliminate "useless" words form consideration we used l1 regularization with our logistic regression model was something we decided to extract for our final classifier. This would reduce our risk of overfitting and also help remove redundant or useless features.
+
+In addition to these approaches, we also found in various tangential research often made use of _TF-IDF_, where you reweight your data such that word frequencies in a given document get amplified if the given word for that document is relatively rare in the dataset and common in that given document. We used scicpy's implementation of this to try improving logistic regression -- since, we suspected, it would result in a _more_ linearly separable dataset if we were moving datapoints to the "correct"/more extreme direction.
+
+#figure(
+  image("images/logistic_tfidf_comparison.png"),
+  caption: [Logistic regression with and without TF-IDF, compared to Bernoulli naïve bayes with and without TF-IDF. Note that Bernoulli naïve bayes does experience any benefit from TF-IDF since features are only compared within themselves.]
+) <fig:tfidf-comparision>
+
+As seen in @fig:tfidf-comparision, we were able to achieve a about 3% higher AUC using this approach with logistic regression. We tried also pre-processing the data in this way for random forest analysis, but it didn't have any significant improvement.
 
 = Choosing our Algorithm
 
@@ -100,7 +111,7 @@ We performed pre-processing to drop features, thinking that we may be able to im
 
 This result led us to believe that the various attributes were more independent than we though (since one would indeed expect naïve bayes to perform better, or even optimally, if labels were more independent). The limitation of naïve bayes, though, and the only way we thought we'd be able to improve, is by dropping an assumption of our data having a linear decision boundary.
 
-We explored two different general strategies to allow for nonlinear boundaries. First, training classifiers specifically designed to discern nonlinear boundaries, and second, preprocessing techniques to augment our data in ways that would induce a nonlinear decision boundary.
+We explored two different general strategies to allow for nonlinear boundaries. First, training classifiers specifically designed to discern nonlinear boundaries, and second, pre-processing techniques to augment our data in ways that would induce a nonlinear decision boundary.
 
 // Recommendations on how to evaluate the effectiveness of your algorithm if it
 // were to be deployed as a personalized spam filter for a user. What might be a
@@ -109,19 +120,19 @@ We explored two different general strategies to allow for nonlinear boundaries. 
 
 = Personal Spam Filter
 
-Our current random forest with pre-processing might work for a customized spam classifier, but the fundamental issue is that we would have to retrain it every time.
-
-The current metrics that we are using, AUC, and TPR \@ FPR=1%, probably should be changed to handle this case.
+== New metrics
 
 // Add the new metrics and why we think they are good new metrics
 
-== New metrics
+The current metrics that we are using, AUC, and TPR \@ FPR=1%, are probably still roughly reasonable for this new situation given the constraints of the problem. We still would like to classify emails correctly and be very careful to not label emails that are not spam as spam.
+
+Since we are letting users have more control over their spam filter though, we may, however, want to work in the ability for them to actually configure their own FNR that they are comfortable with.
+
+== Soliciting feedback
 
 Assuming the same words are the words that a user would want to use to flag emails as spam, we could proceed by just appending word frequency rows to our dataset, and retraining every time that the user would "flag" a given email that our predictor did not previously flag. This is the natural approach to choose, but it is unideal because, at least for our process, training with random forests is relatively expensive, and would not scale well.  We could, instead, compromise and choose to use a worse classifier, like _logistic regression_ with _TF-IDF_ as we explored earlier, which could be relatively cheap to train, or could choose a classifier that does not require training at all, like a _K Nearest Neighbor_ classifier. The issue with using a nearest neighbor classifier is that it would be really expensive to categorize a given email as spam, and we are always classifying emails as spam or not more often then users are flagging emails.
 
 Ultimately, however, we just do not feel that using word frequencies for only the existing frequencies is sufficient to create a good custom spam classifier.
-
-== Soliciting feedback
 
 To solicit feedback, we would likely want to build on prior art, and try to gather as much information as possible when a user "marks as spam" an email. Since it is a personalized filter, it is possible that they flag an email as spam not because _any_ of the frequencies. This introduces an immediate issue, since by just appending a document to our dataset and retraining would probably not work, since here may be unique words that tipped them off.
 
@@ -130,6 +141,8 @@ To try to figure out what "tipped them off," we can look for important words wit
 When we identify new "important" words that were not in our original data, we would end up adding new columns and median-imputing a median of a very small number of points, which would then be implying that that the in-feature variance would be very low, and it would on its own be a useless additional feature until we receive sufficient additional documents.
 
 == New Algorithms
+
+Our current random forest with pre-processing might work for a customized spam classifier, but the fundamental issue is that we would have to retrain it every time.
 
 === Embeddings w/K-Nearest-Neighbor
 
@@ -141,7 +154,7 @@ The advantage of this approach is that semantically similar emails will be close
 
 This method naturally adapts to personalized spam definitions without requiring expensive retraining, and it captures semantic meaning that word frequencies alone cannot represent.
 
-We explored what the implementation of this would look like, and found we could get something working with [sentence-transformers](https://huggingface.co/sentence-transformer), and an open embedding source embedding model (we found "all-MiniLM-L6-v2" works well and is fast). We produced a working example that shows what this would look like #link("https://gist.github.com/404Wolf/3685d01d1224aa86fb6f62621fcbd22a", "here").
+We explored what the implementation of this would look like, and found we could get something working with #link("https://huggingface.co/sentence-transformer", "sentence-transformers"), and an open embedding source embedding model (we found "all-MiniLM-L6-v2" works well and is fast). We produced a working example that shows what this would look like #link("https://gist.github.com/404Wolf/3685d01d1224aa86fb6f62621fcbd22a", "here").
 
 #place(
   top,
@@ -166,13 +179,16 @@ We explored what the implementation of this would look like, and found we could 
     caption: align(left, [
       Email spam classifier using k-NN algorithm. The `email_to_vector` function converts email text into a 384-dimensional semantic embedding using a pretrained transformer model. The `k_nearest_majority_vote` function classifies an email by
 
-      + Combining all known spam and ham embeddings,
+      + Combining all known spam and ham embeddings
       + Computing cosine similarity between the input email and all training examples
       + Selecting the k=5 most similar emails
-      + Predicting the class by majority vote among these neighbors.
+      + Predicting the class by majority vote among these neighbors
     ]),
   ),
 )
 
 
 // To solve this, we will take advantage of
+
+
+#bibliography("sources.bib")
