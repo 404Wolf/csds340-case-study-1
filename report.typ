@@ -141,7 +141,7 @@ The advantage of this approach is that semantically similar emails will be close
 
 This method naturally adapts to personalized spam definitions without requiring expensive retraining, and it captures semantic meaning that word frequencies alone cannot represent.
 
-We explored what the implementation of this would look like, and found we could get something working with [sentence-transformers](https://huggingface.co/sentence-transformer), and an open embedding source embedding model (we found "all-MiniLM-L6-v2" works well and is fast)
+We explored what the implementation of this would look like, and found we could get something working with [sentence-transformers](https://huggingface.co/sentence-transformer), and an open embedding source embedding model (we found "all-MiniLM-L6-v2" works well and is fast). We produced a working example that shows what this would look like #link("https://gist.github.com/404Wolf/3685d01d1224aa86fb6f62621fcbd22a", "here").
 
 #place(
   top,
@@ -166,11 +166,11 @@ We explored what the implementation of this would look like, and found we could 
     caption: align(left, [
       Email spam classifier using k-NN algorithm. The `email_to_vector` function converts email text into a 384-dimensional semantic embedding using a pretrained transformer model. The `k_nearest_majority_vote` function classifies an email by
 
-      + Combining all known spam and ham embeddings, 
+      + Combining all known spam and ham embeddings,
       + Computing cosine similarity between the input email and all training examples
       + Selecting the k=5 most similar emails
       + Predicting the class by majority vote among these neighbors.
-      ]),
+    ]),
   ),
 )
 
