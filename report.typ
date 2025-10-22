@@ -3,7 +3,7 @@
 #set page(
   paper: "us-letter",
   margin: 1in,
-  columns: 2
+  columns: 2,
 )
 
 #set text(
@@ -31,7 +31,7 @@
 // selection, etc.  that you performed, and how it impacted your results.
 
 To pre-process our data, we sought to address a few issues:
-+ The data, as given, for each email, often contained many frequencies that were missing. 
++ The data, as given, for each email, often contained many frequencies that were missing.
 + The data was overly complex. There were many features that did not have much importance, and generally was adding unnecessary complexity. Additionally, we were told that some classes in the dataset had literally no relevance.
 
 To make up for 1., we experimented by testing out different imputation strategies, including:
@@ -72,7 +72,7 @@ Ultimately, we decided only to go with l1 regularization for dropping features, 
 
 We found it interesting that, for logistic regression itself, we saw dramatically successful feature reduction with minimal loss to AUC. Performing l1 regularization on our data with $C=20$ removed *12* features while retaining *99.2%* of our AUC (in what seems to be a well-distributed decrease of AUC), for a simple logistic regression classifier.
 
-We knew that some words should have no influence on the final output. Words like "the," "and," and the like should not really have much influence on whether it is spam or not. To try to eliminate "useless" words form consideration we used l1 regularization with our logistic regression model was something we decided to extract for our final classifier. This would reduce our risk of overfitting and also help remove redundant or useless features. 
+We knew that some words should have no influence on the final output. Words like "the," "and," and the like should not really have much influence on whether it is spam or not. To try to eliminate "useless" words form consideration we used l1 regularization with our logistic regression model was something we decided to extract for our final classifier. This would reduce our risk of overfitting and also help remove redundant or useless features.
 
 = Choosing our Algorithm
 
@@ -117,16 +117,29 @@ The current metrics that we are using, AUC, and TPR \@ FPR=1%, probably should b
 
 == New metrics
 
+Assuming the same words are the words that a user would want to use to flag emails as spam, we could proceed by just appending word frequency rows to our dataset, and retraining every time that the user would "flag" a given email that our predictor did not previously flag. This is the natural approach to choose, but it is unideal because, at least for our process, training with random forests is relatively expensive, and would not scale well.  We could, instead, compromise and choose to use a worse classifier, like _logistic regression_ with _TF-IDF_ as we explored earlier, which could be relatively cheap to train, or could choose a classifier that does not require training at all, like a _K Nearest Neighbor_ classifier. The issue with using a nearest neighbor classifier is that it would be really expensive to categorize a given email as spam, and we are always classifying emails as spam or not more often then users are flagging emails.
+
+Ultimately, however, we just do not feel that using word frequencies for only the existing frequencies is sufficient to create a good custom spam classifier.
+
 == Soliciting feedback
 
 To solicit feedback, we would likely want to build on prior art, and try to gather as much information as possible when a user "marks as spam" an email. Since it is a personalized filter, it is possible that they flag an email as spam not because _any_ of the frequencies. This introduces an immediate issue, since by just appending a document to our dataset and retraining would probably not work, since here may be unique words that tipped them off.
 
 To try to figure out what "tipped them off," we can look for important words with NLP methods. We are somewhat limited though, since we will not have data on the frequencies of new words. Because of this, to find words that probably tipped them off, we would have to use metrics like pointwise mutual information (PMI). However, we may have "important" words in the email that have nothing to do with whether it is spam or why they marked it as spam. If we keep all the previous documents, we would have dramatically higher storage requirements, but would be able to use more powerful methods like TF-IDF.
 
+Because of this, we think it makes sense to seek out
+
 == New Algorithms
 
-Under the assumption
+=== Embeddings w/K-Nearest-Neighbor
+
+The most effective approach would be to start from scratch, since there are in general many fundamental disadvantages to our current word frequency approach.
+
+One unique idea that we explored is using vector embeddings instead of simple word frequencies. Vector embeddings convert each email into a high-dimensional vector that encodes semantic information. This allows us to compare distances between vectors and capture complex semantic relationships in the email content.
+
+The advantage of this approach is that semantically similar emails will be close together in the embedding space, regardless of whether they share exact word frequencies. When a user flags an email as spam, we vectorize it and add it to our corpus of labeled examples. We can then use a simple K-Nearest-Neighbor classifier to determine if new emails are similar to previously flagged spam or legitimate emails.
+
+This method naturally adapts to personalized spam definitions without requiring expensive retraining, and it captures semantic meaning that word frequencies alone cannot represent.
 
 
-
-// To solve this, we will take advantage of 
+// To solve this, we will take advantage of
