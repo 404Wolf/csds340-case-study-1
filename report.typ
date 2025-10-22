@@ -76,7 +76,7 @@ We found it interesting that, for logistic regression itself, we saw dramaticall
 
 We knew that some words should have no influence on the final output. Words like "the," "and," and the like should not really have much influence on whether it is spam or not. To try to eliminate "useless" words form consideration we used l1 regularization with our logistic regression model was something we decided to extract for our final classifier. This would reduce our risk of overfitting and also help remove redundant or useless features.
 
-In addition to these approaches, we also found in various tangential research often made use of _TF-IDF_, where you reweight your data such that word frequencies in a given document get amplified if the given word for that document is relatively rare in the dataset and common in that given document. We used scicpy's implementation of this to try improving logistic regression -- since, we suspected, it would result in a _more_ linearly separable dataset if we were moving datapoints to the "correct"/more extreme direction.
+In addition to these approaches, we also found in various tangential research often made use of _TF-IDF_, where you reweight your data such that word frequencies in a given document get amplified if the given word for that document is relatively rare in the dataset and common in that given document @janez_martino. We used scicpy's implementation of this to try improving logistic regression -- since, we suspected, it would result in a _more_ linearly separable dataset if we were moving datapoints to the "correct"/more extreme direction.
 
 #figure(
   image("images/logistic_tfidf_comparison.png"),
