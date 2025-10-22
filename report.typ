@@ -113,6 +113,15 @@ This result led us to believe that the various attributes were more independent 
 
 We explored two different general strategies to allow for nonlinear boundaries. First, training classifiers specifically designed to discern nonlinear boundaries, and second, pre-processing techniques to augment our data in ways that would induce a nonlinear decision boundary.
 
+ To chose the appropiate non lineaear classifier we trained a different classifiers such as HistGradientBoostingClassifier, RandomForestClassifier, KNeighborsClassifier and ExtraTreesClassifier. 
+
+ We saw KNeighborsClassifier to substantially underperform due to the curse of dimensionality and not enough data in the dataset to have close enough neighbors to make a decision.
+
+ HistGradientBoostingClassifier had a considerably higher AUC in respect to RandomForestClassifier but was lagging behind in the TPR at FPR=0.01.
+
+ Finally we chose ExtraTreesClassifier as our final classifier over the RandomForestClassifier even if it had slightly lower resoults since we saw that our RF was overfitting the data from the validation curves.
+ //! want a validation curves plot of RF agains the extratreesa
+
 // Recommendations on how to evaluate the effectiveness of your algorithm if it
 // were to be deployed as a personalized spam filter for a user. What might be a
 // good choice of metric, and what are the implications on the classifier? How
