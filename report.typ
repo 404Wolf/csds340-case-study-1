@@ -188,6 +188,49 @@ We explored what the implementation of this would look like, and found we could 
 )
 
 
+//! here inser the Random Forest-Based Feature Selòection, Mean Decrease Impurity (MDI) 
+
+//! Model selection
+
+=== KNN
+Is a lazy learniner, memorizing the training set. The nice thing about this is that dosnt require extra training time so and it can get better with a lot more data. assuming billions of emails per day this could probably outperform the other models if we get access tot hose data. (will not suffer from the curse of dimensionality)
+
+=== Linear classifiers
+Linear classifiers can be extremely performant but at the same time they cannot capture word interactions or semantics ("free"+"money" toghether).
+
+This can be solved using a lot of preprocessing techniques-
+
+=== HistGradientBoosting
++ Had the highest test AUC score of all the competitors
++ Best performance in the TPR at FPR=0.01
+  
+=== Random Forest
++ Similar performance to the HistGradientBoosting in the AUC but overall better perfomrance in the TPR at FPR=0.01
+
+here we are trying to maximize the IG at each split.
+
+==== Now Advanced Random Forest Optimization
++ Strategy 1: we exaustively searched for the best hyperparameters for the Random Forest
+RandomizedSearchCV with 100 iterations across 10-fold stratified cross-validation, testing combinations of n_estimators (300-1000), max_depth (10-None), min_samples_split (2-15), min_samples_leaf (1-8), max_features ('sqrt', 'log2', 0.3-0.5), max_samples (0.7-1.0), criterion ('gini', 'entropy'), and class_weight settings.
+
++ Strategy 2: we tested ExtraTreesClassifier as an alternative, hypothesizing that its additional randomization (random thresholds rather than optimal thresholds) might reduce overfitting. Results confirmed this with CV AUC of 0.9022 and notably superior TPR at FPR=0.01 of 0.7279, demonstrating better performance in the critical low false-positive region.
+
++ Strategy 3: Focused GridSearchCV around the best configuration with 243 candidates, achieving final optimized performance.
+
+
+//! here we need graphs about LEARNING CURVES, and VALIDATION CURVES
+//! did we do LDA at all? we did PCA not LDA
+//! we tried to SELECT feature not to EXTRACT features. Wrapper feature selection??
+//! feature scaling U(min max scaling should be useless) Standardizstion migh improve something but not really
+//! for IMPUTATION we have drop data, interpolate, mean imputation, regression based and KNN
+
+
+//! does it make sense to do k fold here???
+//! do we need to deal with class imbalnce
+// Recommendations on how to evaluate the effectiveness of your algorithm if it
+// were to be deployed as a personalized spam filter for a user. What might be a
+// good choice of metric, and what are the implications on the classifier? How
+// might you solicit feedback from users to evaluate and improve your spam filter?
 // To solve this, we will take advantage of
 
 
