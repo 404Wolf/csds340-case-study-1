@@ -1,129 +1,55 @@
-# -*- coding: utf-8 -*-
-"""
-Demo of 10-fold cross-validation using Gaussian naive Bayes on spam data
-
-@author: Kevin S. Xu
-"""
-
 import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.naive_bayes import GaussianNB
-from sklearn.linear_model import LogisticRegression
 from sklearn.impute import SimpleImputer
-from sklearn.pipeline import make_pipeline
-from sklearn.model_selection import cross_val_score
-from sklearn.metrics import roc_auc_score
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import ExtraTreesClassifier, RandomForestClassifier
 
 
-def create_model():
-    return make_pipeline(
-        SimpleImputer(missing_values=-1, strategy="mean"), GaussianNB()
+def get_l1_preserved_features(trainFeatures, trainLabels, C):
+    """Return indices of non-zero coefficients after L1-regularized logistic regression."""
+    model = LogisticRegression(
+        penalty="l1",
+        solver="liblinear",  # supports L1
+        C=C,
+        max_iter=1000,
+        class_weight="balanced",
+        random_state=40,
     )
-
-
-def aucCV(features, labels):
-    model = create_model()
-    scores = cross_val_score(model, features, labels, cv=10, scoring="roc_auc")
-
-    return scores
-
-
-def create_logistic_model():
-    return make_pipeline(
-        SimpleImputer(missing_values=-1, strategy="mean"), LogisticRegression(random_state=42)
-    )
-
-
-def logistic_regression_predict(trainFeatures, trainLabels, testFeatures):
-    """
-    Train a logistic regression model and return class predictions (0 or 1) for test data.
-    
-    Args:
-        trainFeatures: Training feature matrix
-        trainLabels: Training labels
-        testFeatures: Test feature matrix to predict
-        
-    Returns:
-        testPredictions: Array of predicted class labels (0 or 1)
-    """
-    model = create_logistic_model()
     model.fit(trainFeatures, trainLabels)
-    
-    # Get class predictions (0 or 1)
-    testPredictions = model.predict(testFeatures)
-    
-    return testPredictions
-
-
-def logistic_regression_probabilities(trainFeatures, trainLabels, testFeatures):
-    """
-    Train a logistic regression model and return class probabilities for test data.
-    
-    Args:
-        trainFeatures: Training feature matrix
-        trainLabels: Training labels
-        testFeatures: Test feature matrix to predict
-        
-    Returns:
-        testProbabilities: Array of predicted probabilities for positive class
-    """
-    model = create_logistic_model()
-    model.fit(trainFeatures, trainLabels)
-    
-    # Get probability predictions for positive class (class 1)
-    testProbabilities = model.predict_proba(testFeatures)[:, 1]
-    
-    return testProbabilities
+    coef = model.coef_.ravel()
+    idx = np.where(coef != 0)[0]  # indices of preserved (non-zero) features
+    return idx.tolist()
 
 
 def predictTest(trainFeatures, trainLabels, testFeatures):
-    model = create_model()
-    model.fit(trainFeatures, trainLabels)
+    """Impute missing values, select L1-preserved features, then train Random Forest."""
+    imputer = SimpleImputer(missing_values=-1, strategy="median")
+    train_imputed = imputer.fit_transform(trainFeatures)
+    test_imputed = imputer.transform(testFeatures)
 
-    # Use predict_proba() rather than predict() to use probabilities rather
-    # than estimated class labels as outputs
-    testOutputs = model.predict_proba(testFeatures)[:, 1]
+    # L1 feature selection
+    preserved_idx = get_l1_preserved_features(train_imputed, trainLabels, C=50)
+    n_total = train_imputed.shape[1]
+    n_kept = len(preserved_idx)
 
-    return testOutputs
+    print(f"Features kept: {n_kept}/{n_total}")
+    print(f"Indices kept: {preserved_idx}")
 
+    # Subset data using indices (note: use imputed versions!)
+    train_selected = train_imputed[:, preserved_idx]
+    test_selected = test_imputed[:, preserved_idx]
 
-# Run this code only if being used as a script, not being imported
-if __name__ == "__main__":
-    data = np.loadtxt("spamTrain1.csv", delimiter=",")
-    # Separate labels (last column)
-    features = data[:, :-1]
-    labels = data[:, -1]
+    # Train Random Forest
+    model = ExtraTreesClassifier(
+        n_estimators=500,
+        max_features="sqrt",
+        max_depth=None,
+        min_samples_split=5,
+        min_samples_leaf=2,
+        criterion="entropy",
+        class_weight="balanced",
+        bootstrap=True,
+        n_jobs=-1,
+    )
+    model.fit(train_selected, trainLabels)
 
-    # Evaluating classifier accuracy using 10-fold cross-validation
-    print("10-fold cross-validation mean AUC: ", np.mean(aucCV(features, labels)))
-
-    # Arbitrarily choose all odd samples as train set and all even as test set
-    # then compute test set AUC for model trained only on fixed train set
-    trainFeatures = features[0::2, :]
-    trainLabels = labels[0::2]
-    testFeatures = features[1::2, :]
-    testLabels = labels[1::2]
-    testOutputs = predictTest(trainFeatures, trainLabels, testFeatures)
-    print("Test set AUC: ", roc_auc_score(testLabels, testOutputs))
-
-    # Logistic regression predictions
-    logistic_predictions = logistic_regression_predict(trainFeatures, trainLabels, testFeatures)
-    logistic_probabilities = logistic_regression_probabilities(trainFeatures, trainLabels, testFeatures)
-    
-    print("Logistic regression class predictions:", logistic_predictions)
-    print("Logistic regression AUC:", roc_auc_score(testLabels, logistic_probabilities))
-    print("Logistic regression accuracy:", np.mean(logistic_predictions == testLabels))
-
-    # Examine outputs compared to labels
-    sortIndex = np.argsort(testLabels)
-    nTestExamples = testLabels.size
-    plt.subplot(2, 1, 1)
-    plt.plot(np.arange(nTestExamples), testLabels[sortIndex], "b.")
-    plt.xlabel("Sorted example number")
-    plt.ylabel("Target")
-    plt.subplot(2, 1, 2)
-    plt.plot(np.arange(nTestExamples), testOutputs[sortIndex], "r.")
-    plt.xlabel("Sorted example number")
-    plt.ylabel("Output (predicted target)")
-    plt.tight_layout()
-    plt.show()
+    return model.predict_proba(test_selected)[:, 1]
