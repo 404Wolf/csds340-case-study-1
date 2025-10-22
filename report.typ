@@ -127,7 +127,7 @@ To solicit feedback, we would likely want to build on prior art, and try to gath
 
 To try to figure out what "tipped them off," we can look for important words with NLP methods. We are somewhat limited though, since we will not have data on the frequencies of new words. Because of this, to find words that probably tipped them off, we would have to use metrics like pointwise mutual information (PMI). However, we may have "important" words in the email that have nothing to do with whether it is spam or why they marked it as spam. If we keep all the previous documents, we would have dramatically higher storage requirements, but would be able to use more powerful methods like TF-IDF.
 
-Because of this, we think it makes sense to seek out
+When we identify new "important" words that were not in our original data, we would end up adding new columns and median-imputing a median of a very small number of points, which would then be implying that that the in-feature variance would be very low, and it would on its own be a useless additional feature until we receive sufficient additional documents.
 
 == New Algorithms
 
@@ -140,6 +140,39 @@ One unique idea that we explored is using vector embeddings instead of simple wo
 The advantage of this approach is that semantically similar emails will be close together in the embedding space, regardless of whether they share exact word frequencies. When a user flags an email as spam, we vectorize it and add it to our corpus of labeled examples. We can then use a simple K-Nearest-Neighbor classifier to determine if new emails are similar to previously flagged spam or legitimate emails.
 
 This method naturally adapts to personalized spam definitions without requiring expensive retraining, and it captures semantic meaning that word frequencies alone cannot represent.
+
+We explored what the implementation of this would look like, and found we could get something working with [sentence-transformers](https://huggingface.co/sentence-transformer), and an open embedding source embedding model (we found "all-MiniLM-L6-v2" works well and is fast)
+
+#place(
+  top,
+  float: true,
+  scope: "parent",
+  figure(
+    ```py
+    model = SentenceTransformer("all-MiniLM-L6-v2")
+
+    def email_to_vector(email_text: str):
+        return model.encode(email_text, normalize_embeddings=True)
+
+    def k_nearest_majority_vote(email_vec, spam_vectors, ham_vectors, k = 5):
+        all_vectors = np.vstack([spam_vectors, ham_vectors])
+        labels = np.array(["spam"] * len(spam_vectors) + ["ham"] * len(ham_vectors))
+
+        sims = cosine_similarity(email_vec.reshape(1, -1), all_vectors).ravel()
+        top_k_idx = np.argsort(sims)[-k:]; top_k_labels = labels[top_k_idx]
+
+        pred = max(set(top_k_labels), key=list(top_k_labels).count); return pred
+    ```,
+    caption: align(left, [
+      Email spam classifier using k-NN algorithm. The `email_to_vector` function converts email text into a 384-dimensional semantic embedding using a pretrained transformer model. The `k_nearest_majority_vote` function classifies an email by
+
+      + Combining all known spam and ham embeddings, 
+      + Computing cosine similarity between the input email and all training examples
+      + Selecting the k=5 most similar emails
+      + Predicting the class by majority vote among these neighbors.
+      ]),
+  ),
+)
 
 
 // To solve this, we will take advantage of
