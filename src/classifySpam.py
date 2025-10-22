@@ -20,25 +20,21 @@ def get_l1_preserved_features(trainFeatures, trainLabels, C):
     return idx.tolist()
 
 
-def predictTest(trainFeatures, trainLabels, testFeatures):
-    """Impute missing values, select L1-preserved features, then train Random Forest."""
+def getModel(trainFeatures, trainLabels, testFeatures, C=50):
     imputer = SimpleImputer(missing_values=-1, strategy="median")
     train_imputed = imputer.fit_transform(trainFeatures)
     test_imputed = imputer.transform(testFeatures)
 
-    # L1 feature selection
-    preserved_idx = get_l1_preserved_features(train_imputed, trainLabels, C=50)
+    preserved_idx = get_l1_preserved_features(train_imputed, trainLabels, C=C)
     n_total = train_imputed.shape[1]
     n_kept = len(preserved_idx)
 
     print(f"Features kept: {n_kept}/{n_total}")
     print(f"Indices kept: {preserved_idx}")
 
-    # Subset data using indices (note: use imputed versions!)
     train_selected = train_imputed[:, preserved_idx]
     test_selected = test_imputed[:, preserved_idx]
 
-    # Train Random Forest
     model = ExtraTreesClassifier(
         n_estimators=500,
         max_features="sqrt",
@@ -51,5 +47,11 @@ def predictTest(trainFeatures, trainLabels, testFeatures):
         n_jobs=-1,
     )
     model.fit(train_selected, trainLabels)
+
+    return model, test_selected
+
+
+def predictTest(trainFeatures, trainLabels, testFeatures, C=10):
+    model, test_selected = getModel(trainFeatures, trainLabels, testFeatures, C=C)
 
     return model.predict_proba(test_selected)[:, 1]
