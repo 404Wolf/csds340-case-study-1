@@ -19,7 +19,7 @@
 
 #set heading(numbering: "1.")
 
-= Choice of classification Algorithm
+= Our chosen algorithm
 
 // Your final choice of classification algorithm, including the values of important
 // parameters required by the algorithm. Communicate your approach in enough detail
