@@ -47,6 +47,7 @@
               pkgs.pyright
               pkgs.nil
               pkgs.nixd
+              pkgs.mermaid-cli
               python
             ];
           };
