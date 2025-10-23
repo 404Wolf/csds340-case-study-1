@@ -113,26 +113,25 @@ This result led us to believe that the various attributes were more independent 
 
 We explored two different general strategies to allow for nonlinear boundaries. First, training classifiers specifically designed to discern nonlinear boundaries, and second, pre-processing techniques to augment our data in ways that would induce a nonlinear decision boundary.
 
- To chose the appropiate non lineaear classifier we trained a different classifiers such as HistGradientBoostingClassifier, RandomForestClassifier, KNeighborsClassifier and ExtraTreesClassifier. 
+ To choose the appropriate non-linear classifier, we trained different classifiers such as Gradient Boosting, Random Forest, K-Nearest Neighbors, and Extra Trees. 
 
- We saw KNeighborsClassifier to substantially underperform probably due to the curse of dimensionality and not enough data in the dataset to have close enough neighbors to make a decision.
+We observed K-Nearest Neighbors substantially underperforming, likely due to the curse of dimensionality: with 3000 examples distributed across 30 features (some irrelevant), the data becomes too sparse for meaningful distance-based neighborhoods, as points that appear geometrically close lack sufficient shared pattern similarity for reliable classification.
 
- HistGradientBoostingClassifier had a similar performace to RandomForestClassifier but underperformed after optimizing the hyperparameters.
+ Gradient Boosting had a similar performace to Random Forest but underperformed after optimizing the hyperparameters.
  #figure(
   image("images/model_performance_comparison.png")
 ,caption: [Non-linear classifiers performance comparision],
 ) 
 
- Finally we chose ExtraTreesClassifier as our final classifier over the RandomForestClassifier even if it had slightly lower resoults since we saw that our RF was overfitting the data from the validation curves.
+ Finally we chose Extra Trees as our final classifier over the Random Forest even if it had slightly lower resoults since we saw that our RF was overfitting the data from the validation curves.
  //! want a validation curves plot of RF agains the extratreesa
  #figure(
   image("images/learning_curves_comparison.png"),
-  caption: [Overfitting of the RandomForestClassifier and better fitting with the ExtraTreesClassifier],
+  caption: [Overfitting of the Random Forest and better fitting with the Extra Trees],
 ) 
 
-Once we selected the model roughly adjusting the hyperparameters as we tought best, we proceeded to apply an extensive grid search to find the best hyperparameters for the ExtraTreesClassifier.
+Once we selected the model roughly adjusting the hyperparameters as we tought best, we proceeded to apply an extensive grid search to find the best hyperparameters for the Extra Trees. Searching through the following parameters:
 
-Key Parameters
 - `n_estimators`: 300-1000
 - `max_depth`: 10-30 or unlimited  
 - `max_features`: sqrt, log2, or 0.3-0.5
