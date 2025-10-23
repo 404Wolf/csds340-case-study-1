@@ -50,6 +50,7 @@ python comprehensive_evaluation.py
 ```
 
 **This ONE file does EVERYTHING:**
+
 - ✅ Interactive configuration (feature selection, imputation, scaling)
 - ✅ Custom model parameters
 - ✅ Multiple runs for robustness
@@ -71,23 +72,25 @@ python classifySpam_LogReg.py   # Logistic Regression
 
 ## 📊 Expected Performance (Default Settings)
 
-| Model | Test AUC | TPR @ FPR=0.01 |
-|-------|----------|----------------|
-| Random Forest | 0.8985 | 0.4367 |
-| Histogram GB | 0.8928 | 0.3946 |
-| KNN | 0.7834 | 0.0783 |
-| Logistic Reg | ~0.50 | ~0.00 |
+| Model         | Test AUC | TPR @ FPR=0.01 |
+| ------------- | -------- | -------------- |
+| Random Forest | 0.8985   | 0.4367         |
+| Histogram GB  | 0.8928   | 0.3946         |
+| KNN           | 0.7834   | 0.0783         |
+| Logistic Reg  | ~0.50    | ~0.00          |
 
 ## 🔬 Experimentation Guide
 
 ### To Improve TPR @ FPR=0.01:
 
 1. **Enable Feature Selection**:
+
    ```python
    USE_FEATURE_SELECTION = True
    ```
 
 2. **Try Different Imputation** (especially for KNN and LogReg):
+
    ```python
    IMPUTATION_STRATEGY = 'iterative'
    ```
@@ -100,6 +103,7 @@ python classifySpam_LogReg.py   # Logistic Regression
 ### Recommended Configurations by Model:
 
 **HGB (Histogram Gradient Boosting)**:
+
 ```python
 USE_FEATURE_SELECTION = False
 IMPUTATION_STRATEGY = 'median'
@@ -107,6 +111,7 @@ SCALING_METHOD = 'none'
 ```
 
 **Random Forest**:
+
 ```python
 USE_FEATURE_SELECTION = False  # Try True if overfitting
 IMPUTATION_STRATEGY = 'median'
@@ -114,6 +119,7 @@ SCALING_METHOD = 'none'
 ```
 
 **KNN**:
+
 ```python
 USE_FEATURE_SELECTION = True   # Helps with curse of dimensionality
 IMPUTATION_STRATEGY = 'median'
@@ -121,6 +127,7 @@ SCALING_METHOD = 'robust'      # CRITICAL for distance-based methods
 ```
 
 **Logistic Regression**:
+
 ```python
 USE_FEATURE_SELECTION = True   # Helps with high-dimensional data
 IMPUTATION_STRATEGY = 'median'

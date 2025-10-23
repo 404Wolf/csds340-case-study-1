@@ -1,21 +1,25 @@
 # Random Forest Optimization Suite
 
 ## Overview
+
 This script performs comprehensive optimization of Random Forest classifiers through multiple strategies to maximize performance on spam classification.
 
 ## What It Does
 
 ### Strategy 1: Exhaustive Hyperparameter Search
+
 - Tests 100+ parameter combinations using RandomizedSearchCV
 - Explores: n_estimators, max_depth, min_samples_split, min_samples_leaf, max_features, max_samples, criterion, class_weight
 - Uses robust scaling and RF-based feature selection
 
 ### Strategy 2: ExtraTrees Comparison
+
 - Tests ExtraTreesClassifier (more randomization than standard RF)
 - Can sometimes outperform RF by reducing overfitting
 - 80 iterations of hyperparameter search
 
 ### Strategy 3: Feature Selection Variants
+
 - Compares 5 different feature selection approaches:
   1. No feature selection
   2. SelectFromModel with median threshold
@@ -24,6 +28,7 @@ This script performs comprehensive optimization of Random Forest classifiers thr
   5. Aggressive SelectFromModel (more estimators, stricter threshold)
 
 ### Strategy 4: Fine-Tuning
+
 - Takes the best configuration from strategies 1-3
 - Performs focused GridSearchCV around best parameters
 - Final optimization pass
@@ -31,6 +36,7 @@ This script performs comprehensive optimization of Random Forest classifiers thr
 ## Usage
 
 ### Run the optimization:
+
 ```bash
 cd best_models
 python3 optimize_rf.py
@@ -43,6 +49,7 @@ python3 optimize_rf.py
 All results are saved to a timestamped folder: `rf_optimization_YYYYMMDD_HHMMSS/`
 
 ### Files Created:
+
 1. **`optimization_results.csv`** - Summary table of all strategies
 2. **`best_rf_model.pkl`** - Serialized best model (can be loaded with pickle)
 3. **`best_parameters.txt`** - Human-readable best configuration
@@ -55,6 +62,7 @@ All results are saved to a timestamped folder: `rf_optimization_YYYYMMDD_HHMMSS/
 ## Expected Results
 
 Based on current performance (~0.895 AUC), you can expect:
+
 - **Baseline improvement**: +0.005 to +0.015 AUC through hyperparameter tuning
 - **Feature selection optimization**: +0.002 to +0.008 AUC
 - **ExtraTrees**: May match or slightly exceed RF performance
@@ -82,6 +90,7 @@ To add more strategies, create a new function following the pattern of `strategy
 ## Progress Tracking
 
 The script prints detailed progress:
+
 - Current strategy being executed
 - Search progress (verbose mode)
 - Results after each strategy
@@ -109,4 +118,3 @@ The script prints detailed progress:
 2. Update `comprehensive_evaluation.py` with the best parameters
 3. Test the best model on held-out test data
 4. Consider ensemble methods (combine best RF with HGB)
-

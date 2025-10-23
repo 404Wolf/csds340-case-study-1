@@ -335,10 +335,3 @@ We explored what the implementation of this would look like, and found we could 
     )
   ],
 )
-<<<<<<< HEAD
-
-The disadvantages of embeddings are that the actual classification can take a while, and it requires often holding a large embedding model in memory in order to be able to actually vectorize emails. However, it probably does not matter very much how fast classifications actually are, since email is inherently async. When a user receives an email, we could use our embedding algorithm to classify it before it gets to their mailbox, and it would likely be in the worst case only a few extra seconds of work. Additionally, embeddings are language specific, and we would need to have a different model for different languages, and may run into issues if the same user is bilingual and receives emails in multiple languages.
-
-#bibliography("sources.bib")
-=======
->>>>>>> main
