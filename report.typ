@@ -27,6 +27,59 @@
 // parameters required by the algorithm. Communicate your approach in enough detail
 // for someone else to be able to implement and deploy your spam filtering system.
 
+To deploy our spam filtering system, we used @alg:filtering-system, summarized in @fig:system-diagram.
+
+#figure(
+  image("images/diagram.png"),
+  caption: [Diagram of @alg:filtering-system],
+) <fig:system-diagram>
+
+#figure(
+  align(left, [
+    1. Median Imputation for handling missing values (`SimpleImputer` with strategy "median" in scikit-learn)
+    2. Select features using Logistic Regression (`LogisticRegression` in scikit-learn) with L1 Regularization (penalty="l1"), and train an Ensemble Decision Tree model (ExtraTrees in scikit-learn).
+  ]),
+  kind: "algorithm",
+  supplement: [Algorithm],
+  caption: [Algorithm used for spam filtering system],
+) <alg:filtering-system>
+
+The hyperparameter values are detailed below in snippets for each of the components that we used to produce our solution
+
+```python
+SimpleImputer(
+  missing_values=-1,
+  strategy="median"
+)
+```
+
+```python
+LogisticRegression(
+    penalty="l1",
+    solver="liblinear",
+    C=10,
+    max_iter=1000,
+    class_weight="balanced",
+    random_state=40,
+)
+```
+
+```python
+ExtraTreesClassifier(
+    n_estimators=500,
+    max_features="sqrt",
+    max_depth=None,
+    min_samples_split=5,
+    min_samples_leaf=2,
+    criterion="entropy",
+    class_weight="balanced",
+    bootstrap=True,
+    n_jobs=-1,
+)
+```
+
+We discuss the process that we used to arrive at these hyperparameters in @sect:choosing-the-algo.
+
 = Pre processing
 
 // Any pre-processing, such as exploratory data analysis, normalization, feature
@@ -80,12 +133,12 @@ In addition to these approaches, we also found in various tangential research of
 
 #figure(
   image("images/logistic_tfidf_comparison.png"),
-  caption: [Logistic regression with and without TF-IDF, compared to Bernoulli naïve bayes with and without TF-IDF. Note that Bernoulli naïve bayes does experience any benefit from TF-IDF since features are only compared within themselves.]
+  caption: [Logistic regression with and without TF-IDF, compared to Bernoulli naïve bayes with and without TF-IDF. Note that Bernoulli naïve bayes does experience any benefit from TF-IDF since features are only compared within themselves.],
 ) <fig:tfidf-comparision>
 
 As seen in @fig:tfidf-comparision, we were able to achieve a about 3% higher AUC using this approach with logistic regression. We tried also pre-processing the data in this way for random forest analysis, but it didn't have any significant improvement.
 
-= Choosing our Algorithm
+= Choosing our Algorithm <sect:choosing-the-algo>
 
 // How you selected and tested your algorithm and what other algorithms you
 // compared against. Explain why you chose an algorithm and justify your decision!
