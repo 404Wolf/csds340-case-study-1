@@ -74,7 +74,7 @@ We discuss the process that we used to arrive at these hyperparameters in @sect:
 To pre-process our data, we sought to address a few issues:
 
 + The data, as given, for each email, often contained many frequencies that were missing.
-+ The data was overly complex. There were many features that did not have much importance, and generally was adding unnecessary complexity. Additionally, we were told that some classes in the dataset had literally no relevance.
++ The data was overly complex. There were many features that did not have much importance, and generally was adding unnecessary complexity. Additionally, we were told that some classes in the dataset had no relevance.
 
 To make up for 1., we experimented by testing out different imputation strategies, including Mean imputation, Median imputation, Knn imputation, Iterative and imputation, using `scikit-learn`'s `SimpleImputer`, `KNNImputer`, and `IterativeImputer`.
 
