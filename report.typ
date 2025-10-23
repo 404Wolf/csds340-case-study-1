@@ -40,18 +40,16 @@
 
 #set text(tracking: -0.0262em)
 
+#show ref: set text(fill: blue)
+
 = Our chosen algorithm
 
 // Your final choice of classification algorithm, including the values of important
 // parameters required by the algorithm. Communicate your approach in enough detail
 // for someone else to be able to implement and deploy your spam filtering system.
 
-To deploy our spam filtering system, we used @alg:filtering-system, summarized in @fig:system-diagram.
+To deploy our spam filtering system, we used @alg:filtering-system. We aimed to optimize an Ensemble Trees classifier by removing features with L1 Logistic Regression, filling in empty values with median imputation, and optimining hyperparameters with a grid search.
 
-#figure(
-  image("images/diagram.png"),
-  caption: [Diagram of @alg:filtering-system],
-) <fig:system-diagram>
 
 #figure(
   align(left, [
