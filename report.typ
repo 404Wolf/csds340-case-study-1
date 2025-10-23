@@ -3,23 +3,42 @@
 #set page(
   paper: "us-letter",
   margin: 1in,
-  columns: 2,
 )
 
-#set text(
-  size: 12pt,
-)
+#set par(spacing: 0.8em)
+
+#set text(size: 12pt)
 
 #show link: set text(fill: blue)
 
-#align(center)[
-  #text(size: 17pt, weight: "bold")[CSDS340 Case Study]
+#v(-2in)
 
-  *Wolf Mermelstein* and *Alessandro Mason* \
-  Case Western Reserve University
+#align(horizon + center)[
+  #block[
+    #text(size: 24pt, weight: "bold")[CSDS340 Case Study]
+
+    #v(-1em)
+
+    *Wolf Mermelstein* and *Alessandro Mason* \
+    Case Western Reserve University
+
+    #v(0.5em)
+
+    October 22, 2025
+  ],
 ]
 
+#set page(
+  columns: 2,
+  number-align: right,
+  numbering: "1.",
+)
+
+#pagebreak()
+
 #set heading(numbering: "1.")
+
+#set text(tracking: -0.0262em)
 
 = Our chosen algorithm
 
@@ -36,67 +55,30 @@ To deploy our spam filtering system, we used @alg:filtering-system, summarized i
 
 #figure(
   align(left, [
-    1. Median Imputation for handling missing values (`SimpleImputer` with strategy "median" in scikit-learn)
-    2. Select features using Logistic Regression (`LogisticRegression` in scikit-learn) with L1 Regularization (penalty="l1"), and train an Ensemble Decision Tree model (ExtraTrees in scikit-learn).
+    1. Median Imputation for handling missing values
+    2. Perform Logistic Regression with L1 Regularization and determine which features were removed
+    3. Train a Ensemble Decision Tree model.
   ]),
   kind: "algorithm",
   supplement: [Algorithm],
-  caption: [Algorithm used for spam filtering system],
+  caption: [Algorithm for spam filtering],
 ) <alg:filtering-system>
 
-The hyperparameter values are detailed below in snippets for each of the components that we used to produce our solution
-
-```python
-SimpleImputer(
-  missing_values=-1,
-  strategy="median"
-)
-```
-
-```python
-LogisticRegression(
-    penalty="l1",
-    solver="liblinear",
-    C=10,
-    max_iter=1000,
-    class_weight="balanced",
-    random_state=40,
-)
-```
-
-```python
-ExtraTreesClassifier(
-    n_estimators=500,
-    max_features="sqrt",
-    max_depth=None,
-    min_samples_split=5,
-    min_samples_leaf=2,
-    criterion="entropy",
-    class_weight="balanced",
-    bootstrap=True,
-    n_jobs=-1,
-)
-```
+The hyperparameter values are detailed in @fig:optimal-parameters-python in snippets for each of the components that we used to produce our solution.
 
 We discuss the process that we used to arrive at these hyperparameters in @sect:choosing-the-algo.
 
-= Pre processing
+= Pre-processing
 
 // Any pre-processing, such as exploratory data analysis, normalization, feature
 // selection, etc.  that you performed, and how it impacted your results.
 
 To pre-process our data, we sought to address a few issues:
+
 + The data, as given, for each email, often contained many frequencies that were missing.
 + The data was overly complex. There were many features that did not have much importance, and generally was adding unnecessary complexity. Additionally, we were told that some classes in the dataset had literally no relevance.
 
-To make up for 1., we experimented by testing out different imputation strategies, including:
-
-- Mean imputation
-- Median imputation
-- Knn imputation
-- Iterative imputation
-
-Using `scikit-learn`'s `SimpleImputer`, `KNNImputer`, and `IterativeImputer`.
+To make up for 1., we experimented by testing out different imputation strategies, including Mean imputation, Median imputation, Knn imputation, Iterative and imputation, using `scikit-learn`'s `SimpleImputer`, `KNNImputer`, and `IterativeImputer`.
 
 In all cases, for our chosen classifier we found that median imputation resulted in the most accurate classification rates.
 
@@ -104,17 +86,24 @@ For 2., to remove features, we tried using both a random forest and removing the
 
 To find the best choice of $C$ for logistic regression (the hyperparameter that controls the inverse of regularization strength, where higher $C$ means less regularization), we analyzed the effect of different $C$ values and observed corresponding AUCs (seen in @fig:auc-by-c).
 
-#figure(
-  image("images/c_analysis_plot.png"),
-  caption: [Analyzing the AUC for different choices of $C$, paying attention to the corresponding number of features that get dropped at each level],
-) <fig:auc-by-c>
-
 We also considered dropping features by pre-processing with a round of random forest (feature importance based feature selection) before running our classifier. We looked at the effect of dropping different numbers of features on the AUC (seen in @fig:auc-by-features-dropped).
 
-#figure(
-  image("images/trees_drop_analysis.png"),
-  caption: [Analyzing the AUC for when we drop different lowest-importance classes based on random forest classification],
-) <fig:auc-by-features-dropped>
+#stack(
+  [
+    #figure(
+      image("images/trees_drop_analysis.png"),
+      caption: [Analyzing the AUC for when we drop different lowest-importance classes based on random forest classification],
+    ) <fig:auc-by-features-dropped>
+  ],
+  v(0.2in),
+  [
+    #figure(
+      image("images/c_analysis_plot.png"),
+      caption: [Analyzing the AUC for different choices of $C$, paying attention to the corresponding number of features that get dropped at each level],
+    ) <fig:auc-by-c>
+  ],
+)
+
 
 #figure(
   image("images/feature_importance_analysis.png"),
@@ -166,29 +155,49 @@ This result led us to believe that the various attributes were more independent 
 
 We explored two different general strategies to allow for nonlinear boundaries. First, training classifiers specifically designed to discern nonlinear boundaries, and second, pre-processing techniques to augment our data in ways that would induce a nonlinear decision boundary.
 
- To choose the appropriate non-linear classifier, we trained different classifiers such as Gradient Boosting, Random Forest, K-Nearest Neighbors, and Extra Trees. 
+To choose an appropriate non-linear classifier, we trained different classifiers such as Gradient Boosting, Random Forest, K-Nearest Neighbors, and Extra Trees, and optimized hyperparameters for each of them with a simple grid search.
 
-We observed K-Nearest Neighbors substantially underperforming, likely due to the curse of dimensionality: with 3000 examples distributed across 30 features (some irrelevant), the data becomes too sparse for meaningful distance-based neighborhoods, as points that appear geometrically close lack sufficient shared pattern similarity for reliable classification.
+We observed K-Nearest Neighbors substantially underperforming, likely due to the curse of dimensionality: with 3,000 examples distributed across 30 features (and some irrelevant ones), the data becomes too sparse for meaningful distance-based neighborhoods, as points that appear geometrically close lack sufficient shared pattern similarity for reliable classification. We tried many different distance metrics, expecting minkowski distance for our dimensionality (30) to be optimal, but it seemed like Manhattan distance worked best.
 
- Gradient Boosting had a similar performace to Random Forest but underperformed after optimizing the hyperparameters.
- #figure(
-  image("images/model_performance_comparison.png")
-,caption: [Non-linear classifiers performance comparision],
-) 
+Gradient Boosting had a similar performace to Random Forest but underperformed after optimizing the hyperparameters. As we observed earlier, Logistic Regression performed competitively, but we were sitll able to do better.
 
- Finally we chose Extra Trees as our final classifier over the Random Forest even if it had slightly lower resoults since we saw that our RF was overfitting the data from the validation curves.
- //! want a validation curves plot of RF agains the extratreesa
- #figure(
+#figure(
+  image("images/model_performance_comparison.png"),
+  caption: [Non-linear classifiers performance comparision],
+)
+
+We ended up choosing Extra Trees as our final classifier over Random Forest even though it had slightly lower results since it seemed like Random Forest was overfitting the data based on the validation curves seen in @fig:overfitting.
+
+#figure(
   image("images/learning_curves_comparison.png"),
   caption: [Overfitting of the Random Forest and better fitting with the Extra Trees],
-) 
+) <fig:overfitting>
 
-Once we selected the model roughly adjusting the hyperparameters as we tought best, we proceeded to apply an extensive grid search to find the best hyperparameters for the Extra Trees. Searching through the following parameters:
+Once we selected the model roughly adjusting the hyperparameters as we tought best, we proceeded to apply an extensive grid search to find the best hyperparameters for the Extra Trees, which yielded the following optimal hyperparameters (@fig:optimal-parameters).
 
-- `n_estimators`: 300-1000
-- `max_depth`: 10-30 or unlimited  
-- `max_features`: sqrt, log2, or 0.3-0.5
-- `class_weight`: balanced or none
+#place(
+  top,
+  float: true,
+  scope: "parent",
+  [
+    #figure(
+      [
+        #set text(size: 8pt)
+
+        #table(
+          columns: (25%, 25%, 25%, 25%),
+          align: left,
+          [*Parameter*], [*Values*], [*Description*], [*Optimal Value*],
+          [`n_estimators`], [300-1000], [Number of trees in the forest], [500],
+          [`max_depth`], [10-30 or `unlimited`], [Maximum depth of each tree], [unlimited],
+          [`max_features`], [`sqrt`, `log2`, or 0.3-0.5], [Features considered per split], [`sqrt`],
+          [`class_weight`], [balanced or none], [Weight adjustment for imbalanced classes], [balanced],
+        )
+      ],
+      caption: [Table of tuned hyperparameters found with a grid search.],
+    ) <fig:optimal-parameters>
+  ],
+)
 
 
 // Recommendations on how to evaluate the effectiveness of your algorithm if it
@@ -234,39 +243,99 @@ This method naturally adapts to personalized spam definitions without requiring 
 
 We explored what the implementation of this would look like, and found we could get something working with #link("https://huggingface.co/sentence-transformer", "sentence-transformers"), and an open embedding source embedding model (we found "all-MiniLM-L6-v2" works well and is fast). We produced a working example that shows what this would look like #link("https://gist.github.com/404Wolf/3685d01d1224aa86fb6f62621fcbd22a", "here").
 
+#set page(columns: 1)
+
+#bibliography("sources.bib")
+
+#pagebreak()
+
+= Appendix
+
+#figure(
+  [
+    #set text(size: 12pt)
+
+    #table(
+      columns: (33%, 33%, 33%),
+      align: left,
+      [
+        ```python
+        SimpleImputer(
+          missing_values=-1,
+          strategy="median"
+        )
+        ```
+      ],
+      [
+        ```python
+        LogisticRegression(
+            penalty="l1",
+            solver="liblinear",
+            C=10,
+            max_iter=1000,
+            class_weight="balanced",
+            random_state=40,
+        )
+        ```
+      ],
+      [
+        ```python
+        ExtraTreesClassifier(
+            n_estimators=500,
+            max_features="sqrt",
+            max_depth=None,
+            min_samples_split=5,
+            min_samples_leaf=2,
+            criterion="entropy",
+            class_weight="balanced",
+            bootstrap=True,
+            n_jobs=-1,
+        )
+        ```
+      ],
+    )
+  ],
+  caption: [Table of tuned hyperparameters found with a grid search.],
+) <fig:optimal-parameters-python>
+
 #place(
   top,
   float: true,
   scope: "parent",
-  figure(
-    ```py
-    model = SentenceTransformer("all-MiniLM-L6-v2")
+  [
+    #show figure.where(): set figure.caption(position: top)
 
-    def email_to_vector(email_text: str):
-        return model.encode(email_text, normalize_embeddings=True)
+    #figure(
+      block(
+        inset: 9pt,
+        stroke: luma(85%),
+        radius: 6pt,
+        [
+          ```py
+          model = SentenceTransformer("all-MiniLM-L6-v2")
 
-    def k_nearest_majority_vote(email_vec, spam_vectors, ham_vectors, k = 5):
-        all_vectors = np.vstack([spam_vectors, ham_vectors])
-        labels = np.array(["spam"] * len(spam_vectors) + ["ham"] * len(ham_vectors))
+          def email_to_vector(email_text: str):
+          return model.encode(email_text, normalize_embeddings=True)
 
-        sims = cosine_similarity(email_vec.reshape(1, -1), all_vectors).ravel()
-        top_k_idx = np.argsort(sims)[-k:]; top_k_labels = labels[top_k_idx]
+          def k_nearest_majority_vote(email_vec, spam_vectors, ham_vectors, k = 5):
+          all_vectors = np.vstack([spam_vectors, ham_vectors])
+          labels = np.array(["spam"] * len(spam_vectors) + ["ham"] * len(ham_vectors))
 
-        pred = max(set(top_k_labels), key=list(top_k_labels).count); return pred
-    ```,
-    caption: align(left, [
-      Email spam classifier using k-NN algorithm. The `email_to_vector` function converts email text into a 384-dimensional semantic embedding using a pretrained transformer model. The `k_nearest_majority_vote` function classifies an email by
+          sims = cosine_similarity(email_vec.reshape(1, -1), all_vectors).ravel()
+          top_k_idx = np.argsort(sims)[-k:]; top_k_labels = labels[top_k_idx]
 
-      + Combining all known spam and ham embeddings
-      + Computing cosine similarity between the input email and all training examples
-      + Selecting the k=5 most similar emails
-      + Predicting the class by majority vote among these neighbors
-    ]),
-  ),
+          pred = max(set(top_k_labels), key=list(top_k_labels).count); return pred
+          ```
+        ],
+      ),
+      caption: align(left, [
+        Email spam classifier using k-NN algorithm. The `email_to_vector` function converts email text into a 384-dimensional semantic embedding using a pretrained transformer model. The `k_nearest_majority_vote` function classifies an email by
+
+        + Combining all known spam and ham embeddings
+        + Computing cosine similarity between the input email and all training examples
+        + Selecting the k=5 most similar emails
+        + Predicting the class by majority vote among these neighbors
+      ]),
+    )
+  ],
 )
-
-
-// To solve this, we will take advantage of
-
-
-#bibliography("sources.bib")

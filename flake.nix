@@ -42,6 +42,7 @@
       in
       {
         devShells = {
+          TYPST_FONT_PATHS = "${pkgs.liberation-sans-narrow}/share/fonts/truetype";
           default = pkgs.mkShell {
             packages = [
               pkgs.typst
