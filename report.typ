@@ -40,18 +40,16 @@
 
 #set text(tracking: -0.0262em)
 
+#show ref: set text(fill: blue)
+
 = Our chosen algorithm
 
 // Your final choice of classification algorithm, including the values of important
 // parameters required by the algorithm. Communicate your approach in enough detail
 // for someone else to be able to implement and deploy your spam filtering system.
 
-To deploy our spam filtering system, we used @alg:filtering-system, summarized in @fig:system-diagram.
+To deploy our spam filtering system, we used @alg:filtering-system. We aimed to optimize an Ensemble Trees classifier by removing features with L1 Logistic Regression, filling in empty values with median imputation, and optimining hyperparameters with a grid search.
 
-#figure(
-  image("images/diagram.png"),
-  caption: [Diagram of @alg:filtering-system],
-) <fig:system-diagram>
 
 #figure(
   align(left, [
@@ -107,16 +105,16 @@ We also considered dropping features by pre-processing with a round of random fo
 
 #figure(
   image("images/feature_importance_analysis.png"),
-  caption: [The importance of various features. The drop off is mostly linear with two outliers. For the most part, features are decreasingly "important," with no exceptional strata for importance],
+  caption: [The importance of various features. The drop off is mostly linear with two outliers. For the most part, features are decreasingly "important," with no exceptional strata for importance (i.e that 30% of features have 70% of importance)],
 )
+
+Random Forest "importance" scores are relative measures of how often a feature contributes to splits across trees, and importance scores get evened out with a sufficiently large forest. L1 regularization on the other hand forcedly tends to remove redundant features that do not provide additional information. A feature that is moderately important in random forest importance selection may be removed by L1 regularization because we can still make accurate classifications without it, even if it has "importance" in some splits.
 
 We also analyzed the Jaccard similarity of the dropped classes themselves, and found that in general about 60-70% of the classes that were dropped by either method were the same (across different C values and \# important features dropped). The two methods did have their own classes that they would tend to drop, especially at increasing classes-dropped percentages, that were distinct from each other.
 
 Ultimately, we decided only to go with l1 regularization for dropping features, because we felt we would already encapsulate low importance values in our actual classifier -- a decision tree classifier.
 
-We found it interesting that, for logistic regression itself, we saw dramatically successful feature reduction with minimal loss to AUC. Performing l1 regularization on our data with $C=20$ removed *12* features while retaining *99.2%* of our AUC (in what seems to be a well-distributed decrease of AUC), for a simple logistic regression classifier.
-
-We knew that some words should have no influence on the final output. Words like "the," "and," and the like should not really have much influence on whether it is spam or not. To try to eliminate "useless" words form consideration we used l1 regularization with our logistic regression model was something we decided to extract for our final classifier. This would reduce our risk of overfitting and also help remove redundant or useless features.
+We found it interesting that, for logistic regression itself, we saw dramatically successful feature reduction with minimal loss to AUC. Performing L1 regularization on our data with $C=20$ removed *12* features while retaining *99.2%* of our AUC (in what seems to be a well-distributed decrease of AUC), for a simple logistic regression classifier.
 
 In addition to these approaches, we also found in various tangential research often made use of _TF-IDF_, where you reweight your data such that word frequencies in a given document get amplified if the given word for that document is relatively rare in the dataset and common in that given document @janez_martino. We used scicpy's implementation of this to try improving logistic regression -- since, we suspected, it would result in a _more_ linearly separable dataset if we were moving datapoints to the "correct"/more extreme direction.
 
@@ -125,7 +123,7 @@ In addition to these approaches, we also found in various tangential research of
   caption: [Logistic regression with and without TF-IDF, compared to Bernoulli naïve bayes with and without TF-IDF. Note that Bernoulli naïve bayes does experience any benefit from TF-IDF since features are only compared within themselves.],
 ) <fig:tfidf-comparision>
 
-As seen in @fig:tfidf-comparision, we were able to achieve a about 3% higher AUC using this approach with logistic regression. We tried also pre-processing the data in this way for random forest analysis, but it didn't have any significant improvement.
+As seen in @fig:tfidf-comparision, we were able to achieve a about 3% higher AUC using this approach with logistic regression. We tried also pre-processing the data in this way for random forest analysis, but it didn't have any significant improvement, so ultimately we did not end up using _TF-IDF_.
 
 = Choosing our Algorithm <sect:choosing-the-algo>
 
@@ -209,11 +207,11 @@ Once we selected the model roughly adjusting the hyperparameters as we tought be
 
 == New metrics
 
-// Add the new metrics and why we think they are good new metrics
-
 The current metrics that we are using, AUC, and TPR \@ FPR=1%, are probably still roughly reasonable for this new situation given the constraints of the problem. We still would like to classify emails correctly and be very careful to not label emails that are not spam as spam.
 
-Since we are letting users have more control over their spam filter though, we may, however, want to work in the ability for them to actually configure their own FNR that they are comfortable with.
+Since we are letting users have more control over their spam filter though, we may, however, want to work in the ability for them to actually configure their own FNR that they are comfortable with. To do this, we can compute a confusion matrix for classification outputs for different cutoffs for the majority vote for our random forest. We believe this would be really handy for a custom spam filter, since some users would rather see less spam and are okay with occasional emails getting flagged, while others rather live with more spam to reduce the risk of ever missing an email.
+
+Once they've made a choice we can also report to the user their $Beta$, where $β > 1$ would tend to indicate emphasized recall (catching more spam) and $Beta < 1$ would emphasize precision (avoiding false alarms).
 
 == Soliciting feedback
 
@@ -229,9 +227,7 @@ When we identify new "important" words that were not in our original data, we wo
 
 == New Algorithms
 
-Our current random forest with pre-processing might work for a customized spam classifier, but the fundamental issue is that we would have to retrain it every time.
-
-=== Embeddings w/K-Nearest-Neighbor
+Our current random forest with pre-processing might work for a customized spam classifier, but the fundamental issue is that we would have to retrain it every time. We believe we could do a better job classifying spam in a setting where we are looking at arbitrary emails that get classified as spam on-the-fly by using embeddings w/K-nearest-neighbors instead of a random forest.
 
 The most effective approach would be to start from scratch, since there are in general many fundamental disadvantages to our current word frequency approach.
 
@@ -339,3 +335,10 @@ We explored what the implementation of this would look like, and found we could 
     )
   ],
 )
+<<<<<<< HEAD
+
+The disadvantages of embeddings are that the actual classification can take a while, and it requires often holding a large embedding model in memory in order to be able to actually vectorize emails. However, it probably does not matter very much how fast classifications actually are, since email is inherently async. When a user receives an email, we could use our embedding algorithm to classify it before it gets to their mailbox, and it would likely be in the worst case only a few extra seconds of work. Additionally, embeddings are language specific, and we would need to have a different model for different languages, and may run into issues if the same user is bilingual and receives emails in multiple languages.
+
+#bibliography("sources.bib")
+=======
+>>>>>>> main
