@@ -27,14 +27,14 @@
 // parameters required by the algorithm. Communicate your approach in enough detail
 // for someone else to be able to implement and deploy your spam filtering system.
 
-To deploy our spam filtering system we choose to pre-process data with a median imputation, feature select with a logistic regression classifier with L1 regularization, and train an ExtraTreesClassifier. The values of important parameters are shown below.
+To deploy our spam filtering system, we use Median Imputation for handling missing values, select features using Logistic Regression with L1 Regularization, and train an Ensemble Decision Tree model (Extra Trees). Key parameter values are detailed below.
 
-=== median imputation
+=== Median Imputation
 ```python
 imputer = SimpleImputer(missing_values=-1, strategy="median")
 ```
 
-=== feature selection
+=== Feature Selection with L1 Regularized Logistic Regression
 ```python
 model = LogisticRegression(
     penalty="l1",
@@ -46,19 +46,19 @@ model = LogisticRegression(
 )
 ```
 
-=== main algorithm
+=== Ensemble Tree-Based Classification (Extra Trees)
 ```python 
- model = ExtraTreesClassifier(
-        n_estimators=500,
-        max_features="sqrt",
-        max_depth=None,
-        min_samples_split=5,
-        min_samples_leaf=2,
-        criterion="entropy",
-        class_weight="balanced",
-        bootstrap=True,
-        n_jobs=-1,
-    )
+model = ExtraTreesClassifier(
+    n_estimators=500,
+    max_features="sqrt",
+    max_depth=None,
+    min_samples_split=5,
+    min_samples_leaf=2,
+    criterion="entropy",
+    class_weight="balanced",
+    bootstrap=True,
+    n_jobs=-1,
+)
 ```
 
 = Pre processing
