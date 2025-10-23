@@ -13,9 +13,15 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import cross_val_score, StratifiedKFold, learning_curve
+from sklearn.feature_extraction.text import TfidfTransformer
+from sklearn.model_selection import cross_val_score, StratifiedKFold, learning_curve, GridSearchCV, RandomizedSearchCV
 from sklearn.metrics import roc_auc_score, roc_curve
 import os
+import sys
+
+# Add parent directory to path to import classifySpam
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from classifySpam import predictTest, predictTestWithTFIDF
 
 def tprAtFPR(labels, outputs, desiredFPR):
     """Calculate TPR at specific FPR"""
@@ -28,8 +34,74 @@ def tprAtFPR(labels, outputs, desiredFPR):
     ) + tprBelow
     return tprAt, fpr, tpr
 
+def get_optimized_params(model_type):
+    """Get optimized hyperparameters for each model type"""
+    if model_type == "HGB":
+        return {
+            "learning_rate": 0.1,
+            "max_depth": 8,
+            "min_samples_leaf": 20,
+            "max_iter": 300,
+            "l2_regularization": 0.5,
+            "early_stopping": True,
+            "validation_fraction": 0.1,
+        }
+    elif model_type == "RF":
+        return {
+            "n_estimators": 500,
+            "max_features": "sqrt",
+            "max_depth": 20,
+            "min_samples_split": 5,
+            "min_samples_leaf": 2,
+            "class_weight": "balanced",
+            "max_samples": 0.9,
+            "n_jobs": -1,
+            "random_state": 42,
+        }
+    elif model_type == "ExtraTrees":
+        return {
+            "n_estimators": 500,
+            "max_features": "sqrt",
+            "max_depth": 20,
+            "min_samples_split": 5,
+            "min_samples_leaf": 2,
+            "class_weight": "balanced",
+            "bootstrap": True,
+            "max_samples": 0.9,
+            "n_jobs": -1,
+            "random_state": 42,
+        }
+    elif model_type == "KNN":
+        return {
+            "n_neighbors": 15,
+            "weights": "distance",
+            "metric": "euclidean",
+            "n_jobs": -1,
+        }
+    elif model_type == "LogReg":
+        return {
+            "penalty": "l2",
+            "C": 10.0,
+            "solver": "lbfgs",
+            "max_iter": 2000,
+            "class_weight": "balanced",
+            "random_state": 42,
+            "n_jobs": -1,
+        }
+    elif model_type == "LogRegTFIDF":
+        return {
+            "penalty": "l1",
+            "C": 50.0,
+            "solver": "liblinear",
+            "max_iter": 10000,
+            "class_weight": "balanced",
+            "random_state": 42,
+            "n_jobs": -1,
+        }
+    return {}
+
 def create_model_pipeline(model_type):
-    """Create a pipeline for each model type"""
+    """Create a pipeline for each model type with optimized parameters"""
     steps = []
     
     # Imputation
@@ -39,89 +111,206 @@ def create_model_pipeline(model_type):
     if model_type in ["KNN", "LogReg"]:
         steps.append(("scale", StandardScaler()))
     
-    # Model
+    # TF-IDF transformation (for LogRegTFIDF)
+    if model_type == "LogRegTFIDF":
+        # TF-IDF expects non-negative values, so we need to ensure all values are >= 0
+        from sklearn.preprocessing import FunctionTransformer
+        def ensure_non_negative(X):
+            return np.maximum(X, 0)
+        steps.append(("non_neg", FunctionTransformer(ensure_non_negative)))
+        steps.append(("tfidf", TfidfTransformer()))
+    
+    # Model with optimized parameters
+    params = get_optimized_params(model_type)
+    
     if model_type == "HGB":
-        model = HistGradientBoostingClassifier(
-            random_state=42,
-            learning_rate=0.05,
-            max_depth=5,
-            min_samples_leaf=50,
-            max_iter=200,
-            l2_regularization=1.0,
-            early_stopping=True,
-            validation_fraction=0.1,
-        )
+        model = HistGradientBoostingClassifier(random_state=42, **params)
     elif model_type == "RF":
-        model = RandomForestClassifier(
-            n_estimators=300,
-            max_features="sqrt",
-            max_depth=15,
-            min_samples_split=10,
-            min_samples_leaf=5,
-            class_weight="balanced",
-            max_samples=0.8,
-            n_jobs=-1,
-            random_state=42,
-        )
+        model = RandomForestClassifier(**params)
     elif model_type == "ExtraTrees":
-        model = ExtraTreesClassifier(
-            n_estimators=300,
-            max_features="sqrt",
-            max_depth=15,
-            min_samples_split=10,
-            min_samples_leaf=5,
-            class_weight="balanced",
-            bootstrap=True,
-            max_samples=0.8,
-            n_jobs=-1,
-            random_state=42,
-        )
+        model = ExtraTreesClassifier(**params)
     elif model_type == "KNN":
-        model = KNeighborsClassifier(
-            n_neighbors=21,
-            weights="distance",
-            metric="euclidean",
-            n_jobs=-1,
-        )
+        model = KNeighborsClassifier(**params)
     elif model_type == "LogReg":
-        model = LogisticRegression(
-            penalty="l2",
-            C=1.0,
-            solver="lbfgs",
-            max_iter=1000,
-            class_weight="balanced",
-            random_state=42,
-            n_jobs=-1,
-        )
+        model = LogisticRegression(**params)
+    elif model_type == "LogRegTFIDF":
+        model = LogisticRegression(**params)
     
     steps.append(("model", model))
     
     from sklearn.pipeline import Pipeline
     return Pipeline(steps)
 
-def evaluate_model_performance(model_type, features, labels, train_features, train_labels, test_features, test_labels):
-    """Evaluate model performance and return metrics"""
-    pipeline = create_model_pipeline(model_type)
+def optimize_and_evaluate_model(model_type, train_features, train_labels, test_features, test_labels, optimize=True):
+    """Optimize hyperparameters and evaluate model performance"""
     
-    # Cross-validation
-    cv = StratifiedKFold(n_splits=10, shuffle=True, random_state=42)
-    cv_scores = cross_val_score(pipeline, features, labels, cv=cv, scoring="roc_auc", n_jobs=-1)
+    if not optimize:
+        # Use pre-defined optimized parameters
+        pipeline = create_model_pipeline(model_type)
+        
+        # Cross-validation on training data only
+        cv = StratifiedKFold(n_splits=10, shuffle=True, random_state=42)
+        cv_scores = cross_val_score(pipeline, train_features, train_labels, cv=cv, scoring="roc_auc", n_jobs=-1)
+        
+        # Test set evaluation
+        pipeline.fit(train_features, train_labels)
+        test_outputs = pipeline.predict_proba(test_features)[:, 1]
+        test_auc = roc_auc_score(test_labels, test_outputs)
+        tpr_at_fpr, fpr, tpr = tprAtFPR(test_labels, test_outputs, 0.01)
+        
+        return {
+            "model": model_type,
+            "cv_mean": np.mean(cv_scores),
+            "cv_std": np.std(cv_scores),
+            "test_auc": test_auc,
+            "tpr_mean": tpr_at_fpr,
+            "fpr": fpr,
+            "tpr": tpr,
+        }
+    
+    # Perform hyperparameter optimization
+    base_pipeline = create_model_pipeline(model_type)
+    
+    # Define parameter grids for optimization
+    param_grids = {
+        "HGB": {
+            "model__learning_rate": [0.05, 0.1, 0.2],
+            "model__max_depth": [6, 8, 10],
+            "model__min_samples_leaf": [10, 20, 30],
+            "model__l2_regularization": [0.1, 0.5, 1.0],
+        },
+        "RF": {
+            "model__n_estimators": [300, 500, 700],
+            "model__max_depth": [15, 20, 25],
+            "model__min_samples_split": [2, 5, 10],
+            "model__min_samples_leaf": [1, 2, 4],
+        },
+        "KNN": {
+            "model__n_neighbors": [5, 10, 15, 20],
+            "model__weights": ["uniform", "distance"],
+            "model__metric": ["euclidean", "manhattan"],
+        },
+        "LogReg": {
+            "model__C": [0.1, 1.0, 10.0, 100.0],
+            "model__penalty": ["l2"],  # Only L2 for lbfgs solver
+            "model__solver": ["lbfgs"],
+        },
+        "LogRegTFIDF": {
+            "model__C": [1.0, 10.0, 50.0, 100.0],
+            "model__penalty": ["l1"],
+            "model__solver": ["liblinear"],  # Only liblinear for L1 penalty
+        },
+    }
+    
+    if model_type not in param_grids:
+        # Fallback to non-optimized version
+        return optimize_and_evaluate_model(model_type, train_features, train_labels, test_features, test_labels, optimize=False)
+    
+    # Use RandomizedSearchCV for faster optimization
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)  # Reduced folds for speed
+    search = RandomizedSearchCV(
+        base_pipeline,
+        param_grids[model_type],
+        n_iter=20,  # Number of parameter settings sampled
+        cv=cv,
+        scoring="roc_auc",
+        n_jobs=-1,
+        random_state=42,
+        verbose=0
+    )
+    
+    print(f"  Optimizing {model_type} hyperparameters...")
+    search.fit(train_features, train_labels)
+    
+    # Get best model and evaluate
+    best_pipeline = search.best_estimator_
+    cv_scores = search.cv_results_['mean_test_score']
     
     # Test set evaluation
-    pipeline.fit(train_features, train_labels)
-    test_outputs = pipeline.predict_proba(test_features)[:, 1]
+    test_outputs = best_pipeline.predict_proba(test_features)[:, 1]
     test_auc = roc_auc_score(test_labels, test_outputs)
     tpr_at_fpr, fpr, tpr = tprAtFPR(test_labels, test_outputs, 0.01)
     
+    print(f"  Best params: {search.best_params_}")
+    print(f"  Best CV score: {search.best_score_:.4f}")
+    
     return {
         "model": model_type,
-        "cv_mean": np.mean(cv_scores),
+        "cv_mean": search.best_score_,
         "cv_std": np.std(cv_scores),
         "test_auc": test_auc,
         "tpr_mean": tpr_at_fpr,
         "fpr": fpr,
         "tpr": tpr,
+        "best_params": search.best_params_,
     }
+
+def evaluate_model_performance(model_type, train_features, train_labels, test_features, test_labels, optimize=True):
+    """Evaluate model performance and return metrics using same approach as evaluateClassifier.py"""
+    
+    if model_type == "BestModel":
+        # Use the actual model from classifySpam.py
+        test_outputs = predictTest(train_features, train_labels, test_features)
+        test_auc = roc_auc_score(test_labels, test_outputs)
+        tpr_at_fpr, fpr, tpr = tprAtFPR(test_labels, test_outputs, 0.01)
+        
+        # Manual cross-validation for BestModel
+        cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)  # Reduced folds for speed
+        cv_scores = []
+        
+        for train_idx, val_idx in cv.split(train_features, train_labels):
+            X_train_cv, X_val_cv = train_features[train_idx], train_features[val_idx]
+            y_train_cv, y_val_cv = train_labels[train_idx], train_labels[val_idx]
+            
+            # Get predictions using predictTest
+            val_outputs = predictTest(X_train_cv, y_train_cv, X_val_cv)
+            val_auc = roc_auc_score(y_val_cv, val_outputs)
+            cv_scores.append(val_auc)
+        
+        cv_scores = np.array(cv_scores)
+        
+        return {
+            "model": model_type,
+            "cv_mean": np.mean(cv_scores),
+            "cv_std": np.std(cv_scores),
+            "test_auc": test_auc,
+            "tpr_mean": tpr_at_fpr,
+            "fpr": fpr,
+            "tpr": tpr,
+        }
+    elif model_type == "BestModelTFIDF":
+        # Use the TF-IDF enhanced model from classifySpam.py
+        test_outputs = predictTestWithTFIDF(train_features, train_labels, test_features)
+        test_auc = roc_auc_score(test_labels, test_outputs)
+        tpr_at_fpr, fpr, tpr = tprAtFPR(test_labels, test_outputs, 0.01)
+        
+        # Manual cross-validation for BestModelTFIDF
+        cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)  # Reduced folds for speed
+        cv_scores = []
+        
+        for train_idx, val_idx in cv.split(train_features, train_labels):
+            X_train_cv, X_val_cv = train_features[train_idx], train_features[val_idx]
+            y_train_cv, y_val_cv = train_labels[train_idx], train_labels[val_idx]
+            
+            # Get predictions using predictTestWithTFIDF
+            val_outputs = predictTestWithTFIDF(X_train_cv, y_train_cv, X_val_cv)
+            val_auc = roc_auc_score(y_val_cv, val_outputs)
+            cv_scores.append(val_auc)
+        
+        cv_scores = np.array(cv_scores)
+        
+        return {
+            "model": model_type,
+            "cv_mean": np.mean(cv_scores),
+            "cv_std": np.std(cv_scores),
+            "test_auc": test_auc,
+            "tpr_mean": tpr_at_fpr,
+            "fpr": fpr,
+            "tpr": tpr,
+        }
+    else:
+        # Use the optimization function for other models
+        return optimize_and_evaluate_model(model_type, train_features, train_labels, test_features, test_labels, optimize)
 
 def create_model_performance_graph():
     """Create graph showing model performance in terms of AUC and TPR"""
@@ -129,28 +318,32 @@ def create_model_performance_graph():
     print("MODEL PERFORMANCE COMPARISON (AUC & TPR)")
     print("=" * 80)
     
-    # Load data
-    data_filename = "../spamTrain1.csv"
-    data = np.loadtxt(data_filename, delimiter=",")
-    features = data[:, :-1]
-    labels = data[:, -1]
+    # Load data using same approach as evaluateClassifier.py
+    train_data_filename = "../spamTrain1.csv"
+    test_data_filename = "../spamTrain2.csv"
     
-    train_features = features[0::2, :]
-    train_labels = labels[0::2]
-    test_features = features[1::2, :]
-    test_labels = labels[1::2]
+    train_data = np.loadtxt(train_data_filename, delimiter=",")
+    test_data = np.loadtxt(test_data_filename, delimiter=",")
     
-    print(f"Dataset: {features.shape[0]} samples, {features.shape[1]} features")
-    print(f"Train: {train_features.shape[0]} | Test: {test_features.shape[0]}")
+    # Separate labels (last column) from training and test data
+    train_features = train_data[:, :-1]
+    train_labels = train_data[:, -1]
+    test_features = test_data[:, :-1]
+    test_labels = test_data[:, -1]
     
-    # Evaluate all models
-    models = ["HGB", "RF", "KNN", "LogReg"]
+    print(f"Train: {train_features.shape[0]} samples, {train_features.shape[1]} features")
+    print(f"Test: {test_features.shape[0]} samples")
+    
+    # Evaluate all models (including the best model from classifySpam.py and TF-IDF enhanced version)
+    models = ["BestModel", "BestModelTFIDF", "HGB", "RF", "KNN", "LogReg", "LogRegTFIDF"]
     results = []
     
     for model_type in models:
         print(f"\nEvaluating {model_type}...")
+        if model_type not in ["BestModel", "BestModelTFIDF"]:
+            print(f"  Using hyperparameter optimization for {model_type}")
         result = evaluate_model_performance(
-            model_type, features, labels, train_features, train_labels, test_features, test_labels
+            model_type, train_features, train_labels, test_features, test_labels, optimize=True
         )
         results.append(result)
         print(f"  CV AUC: {result['cv_mean']:.4f} ± {result['cv_std']:.4f}")
@@ -229,13 +422,13 @@ def create_learning_curves_graph():
     print("LEARNING CURVES (Training vs Validation Accuracy)")
     print("=" * 80)
     
-    # Load data
-    data_filename = "../spamTrain1.csv"
-    data = np.loadtxt(data_filename, delimiter=",")
-    features = data[:, :-1]
-    labels = data[:, -1]
+    # Load data using same approach as evaluateClassifier.py
+    train_data_filename = "../spamTrain1.csv"
+    train_data = np.loadtxt(train_data_filename, delimiter=",")
+    features = train_data[:, :-1]
+    labels = train_data[:, -1]
     
-    print(f"Dataset: {features.shape[0]} samples, {features.shape[1]} features")
+    print(f"Training dataset: {features.shape[0]} samples, {features.shape[1]} features")
     
     # Setup learning curve parameters
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
