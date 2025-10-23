@@ -3,23 +3,44 @@
 #set page(
   paper: "us-letter",
   margin: 1in,
-  columns: 2,
 )
 
-#set text(
-  size: 12pt,
-)
+#set par(spacing: 0.8em)
+
+#set text(size: 12pt)
 
 #show link: set text(fill: blue)
 
-#align(center)[
-  #text(size: 17pt, weight: "bold")[CSDS340 Case Study]
+#v(-2in)
 
-  *Wolf Mermelstein* and *Alessandro Mason* \
-  Case Western Reserve University
+#align(horizon + center)[
+  #block[
+    #text(size: 24pt, weight: "bold")[CSDS340 Case Study]
+
+    #v(-1em)
+
+    *Wolf Mermelstein* and *Alessandro Mason* \
+    Case Western Reserve University
+
+    #v(0.5em)
+
+    October 22, 2025
+  ],
 ]
 
+#set page(
+  columns: 2,
+  number-align: right,
+  numbering: "1.",
+)
+
+#pagebreak()
+
 #set heading(numbering: "1.")
+
+#set text(tracking: -0.0262em)
+
+#show ref: set text(fill: blue)
 
 = Our chosen algorithm
 
@@ -27,28 +48,60 @@
 // parameters required by the algorithm. Communicate your approach in enough detail
 // for someone else to be able to implement and deploy your spam filtering system.
 
-= Pre processing
+To deploy our spam filtering system, we used @alg:filtering-system. We aimed to optimize an Ensemble Trees classifier by removing features with L1 Logistic Regression, filling in empty values with median imputation, and optimining hyperparameters with a grid search.
+
+
+#figure(
+  align(left, [
+    1. Median Imputation for handling missing values
+    2. Perform Logistic Regression with L1 Regularization and determine which features were removed
+    3. Train a Ensemble Decision Tree model.
+  ]),
+  kind: "algorithm",
+  supplement: [Algorithm],
+  caption: [Algorithm for spam filtering],
+) <alg:filtering-system>
+
+The hyperparameter values are detailed in @fig:optimal-parameters-python in snippets for each of the components that we used to produce our solution.
+
+We discuss the process that we used to arrive at these hyperparameters in @sect:choosing-the-algo.
+
+= Pre-processing
 
 // Any pre-processing, such as exploratory data analysis, normalization, feature
 // selection, etc.  that you performed, and how it impacted your results.
 
-To pre-process our data, we sought to address that the data, as given, for each email, often contained many frequencies that were missing. And, that the data was overly complex. There were many features that did not have much importance, and generally was adding unnecessary complexity.
+To pre-process our data, we sought to address a few issues:
 
-To deal with missing values for rows, we experimented by testing out different imputation strategies, including Mean and Median imputation with `SimpleImputer`, KNN imputation with `KNNImputer`, and Iterative imputation with `IterativeImputer`. In all cases, for our chosen classifier we found that *median imputation* resulted in the most accurate classification rates.
++ The data, as given, for each email, often contained many frequencies that were missing.
++ The data was overly complex. There were many features that did not have much importance, and generally was adding unnecessary complexity. Additionally, we were told that some classes in the dataset had literally no relevance.
 
-To remove extraneous features, we tried using both a random forest where we removed the lowest importance features, and also logistic regression with L1 regularization. L1 regularization tended to yield higher accuracy. To find the best choice of $C$ for logistic regression (the hyperparameter that controls the inverse of regularization strength, where higher $C$ means less regularization), we analyzed the effect of different $C$ values and observed corresponding AUCs (seen in @fig:auc-by-c).
+To make up for 1., we experimented by testing out different imputation strategies, including Mean imputation, Median imputation, Knn imputation, Iterative and imputation, using `scikit-learn`'s `SimpleImputer`, `KNNImputer`, and `IterativeImputer`.
 
-#figure(
-  image("images/c_analysis_plot.png"),
-  caption: [Analyzing the AUC for different choices of $C$, paying attention to the corresponding number of features that get dropped at each level],
-) <fig:auc-by-c>
+In all cases, for our chosen classifier we found that median imputation resulted in the most accurate classification rates.
+
+For 2., to remove features, we tried using both a random forest and removing the lowest gini impurity classes, and also logistic regression with L1 regularization. It turned out that L1 regularization yielded higher accuracy, so we went with L1 regularization.
+
+To find the best choice of $C$ for logistic regression (the hyperparameter that controls the inverse of regularization strength, where higher $C$ means less regularization), we analyzed the effect of different $C$ values and observed corresponding AUCs (seen in @fig:auc-by-c).
 
 We also considered dropping features by pre-processing with a round of random forest (feature importance based feature selection) before running our classifier. We looked at the effect of dropping different numbers of features on the AUC (seen in @fig:auc-by-features-dropped).
 
-#figure(
-  image("images/trees_drop_analysis.png"),
-  caption: [Analyzing the AUC for when we drop different lowest-importance classes based on random forest classification],
-) <fig:auc-by-features-dropped>
+#stack(
+  [
+    #figure(
+      image("images/trees_drop_analysis.png"),
+      caption: [Analyzing the AUC for when we drop different lowest-importance classes based on random forest classification],
+    ) <fig:auc-by-features-dropped>
+  ],
+  v(0.2in),
+  [
+    #figure(
+      image("images/c_analysis_plot.png"),
+      caption: [Analyzing the AUC for different choices of $C$, paying attention to the corresponding number of features that get dropped at each level],
+    ) <fig:auc-by-c>
+  ],
+)
+
 
 #figure(
   image("images/feature_importance_analysis.png"),
@@ -67,12 +120,12 @@ In addition to these approaches, we also found in various tangential research of
 
 #figure(
   image("images/logistic_tfidf_comparison.png"),
-  caption: [Logistic regression with and without TF-IDF, compared to Bernoulli naïve bayes with and without TF-IDF. Note that Bernoulli naïve bayes does experience any benefit from TF-IDF since features are only compared within themselves.]
+  caption: [Logistic regression with and without TF-IDF, compared to Bernoulli naïve bayes with and without TF-IDF. Note that Bernoulli naïve bayes does experience any benefit from TF-IDF since features are only compared within themselves.],
 ) <fig:tfidf-comparision>
 
 As seen in @fig:tfidf-comparision, we were able to achieve a about 3% higher AUC using this approach with logistic regression. We tried also pre-processing the data in this way for random forest analysis, but it didn't have any significant improvement, so ultimately we did not end up using _TF-IDF_.
 
-= Choosing our Algorithm
+= Choosing our Algorithm <sect:choosing-the-algo>
 
 // How you selected and tested your algorithm and what other algorithms you
 // compared against. Explain why you chose an algorithm and justify your decision!
@@ -99,6 +152,51 @@ We performed pre-processing to drop features, thinking that we may be able to im
 This result led us to believe that the various attributes were more independent than we though (since one would indeed expect naïve bayes to perform better, or even optimally, if labels were more independent). The limitation of naïve bayes, though, and the only way we thought we'd be able to improve, is by dropping an assumption of our data having a linear decision boundary.
 
 We explored two different general strategies to allow for nonlinear boundaries. First, training classifiers specifically designed to discern nonlinear boundaries, and second, pre-processing techniques to augment our data in ways that would induce a nonlinear decision boundary.
+
+To choose an appropriate non-linear classifier, we trained different classifiers such as Gradient Boosting, Random Forest, K-Nearest Neighbors, and Extra Trees, and optimized hyperparameters for each of them with a simple grid search.
+
+We observed K-Nearest Neighbors substantially underperforming, likely due to the curse of dimensionality: with 3,000 examples distributed across 30 features (and some irrelevant ones), the data becomes too sparse for meaningful distance-based neighborhoods, as points that appear geometrically close lack sufficient shared pattern similarity for reliable classification. We tried many different distance metrics, expecting minkowski distance for our dimensionality (30) to be optimal, but it seemed like Manhattan distance worked best.
+
+Gradient Boosting had a similar performace to Random Forest but underperformed after optimizing the hyperparameters. As we observed earlier, Logistic Regression performed competitively, but we were sitll able to do better.
+
+#figure(
+  image("images/model_performance_comparison.png"),
+  caption: [Non-linear classifiers performance comparision],
+)
+
+We ended up choosing Extra Trees as our final classifier over Random Forest even though it had slightly lower results since it seemed like Random Forest was overfitting the data based on the validation curves seen in @fig:overfitting.
+
+#figure(
+  image("images/learning_curves_comparison.png"),
+  caption: [Overfitting of the Random Forest and better fitting with the Extra Trees],
+) <fig:overfitting>
+
+Once we selected the model roughly adjusting the hyperparameters as we tought best, we proceeded to apply an extensive grid search to find the best hyperparameters for the Extra Trees, which yielded the following optimal hyperparameters (@fig:optimal-parameters).
+
+#place(
+  top,
+  float: true,
+  scope: "parent",
+  [
+    #figure(
+      [
+        #set text(size: 8pt)
+
+        #table(
+          columns: (25%, 25%, 25%, 25%),
+          align: left,
+          [*Parameter*], [*Values*], [*Description*], [*Optimal Value*],
+          [`n_estimators`], [300-1000], [Number of trees in the forest], [500],
+          [`max_depth`], [10-30 or `unlimited`], [Maximum depth of each tree], [unlimited],
+          [`max_features`], [`sqrt`, `log2`, or 0.3-0.5], [Features considered per split], [`sqrt`],
+          [`class_weight`], [balanced or none], [Weight adjustment for imbalanced classes], [balanced],
+        )
+      ],
+      caption: [Table of tuned hyperparameters found with a grid search.],
+    ) <fig:optimal-parameters>
+  ],
+)
+
 
 // Recommendations on how to evaluate the effectiveness of your algorithm if it
 // were to be deployed as a personalized spam filter for a user. What might be a
@@ -141,37 +239,106 @@ This method naturally adapts to personalized spam definitions without requiring 
 
 We explored what the implementation of this would look like, and found we could get something working with #link("https://huggingface.co/sentence-transformer", "sentence-transformers"), and an open embedding source embedding model (we found "all-MiniLM-L6-v2" works well and is fast). We produced a working example that shows what this would look like #link("https://gist.github.com/404Wolf/3685d01d1224aa86fb6f62621fcbd22a", "here").
 
+#set page(columns: 1)
+
+#bibliography("sources.bib")
+
+#pagebreak()
+
+= Appendix
+
+#figure(
+  [
+    #set text(size: 12pt)
+
+    #table(
+      columns: (33%, 33%, 33%),
+      align: left,
+      [
+        ```python
+        SimpleImputer(
+          missing_values=-1,
+          strategy="median"
+        )
+        ```
+      ],
+      [
+        ```python
+        LogisticRegression(
+            penalty="l1",
+            solver="liblinear",
+            C=10,
+            max_iter=1000,
+            class_weight="balanced",
+            random_state=40,
+        )
+        ```
+      ],
+      [
+        ```python
+        ExtraTreesClassifier(
+            n_estimators=500,
+            max_features="sqrt",
+            max_depth=None,
+            min_samples_split=5,
+            min_samples_leaf=2,
+            criterion="entropy",
+            class_weight="balanced",
+            bootstrap=True,
+            n_jobs=-1,
+        )
+        ```
+      ],
+    )
+  ],
+  caption: [Table of tuned hyperparameters found with a grid search.],
+) <fig:optimal-parameters-python>
+
 #place(
   top,
   float: true,
   scope: "parent",
-  figure(
-    ```py
-    model = SentenceTransformer("all-MiniLM-L6-v2")
+  [
+    #show figure.where(): set figure.caption(position: top)
 
-    def email_to_vector(email_text: str):
-        return model.encode(email_text, normalize_embeddings=True)
+    #figure(
+      block(
+        inset: 9pt,
+        stroke: luma(85%),
+        radius: 6pt,
+        [
+          ```py
+          model = SentenceTransformer("all-MiniLM-L6-v2")
 
-    def k_nearest_majority_vote(email_vec, spam_vectors, ham_vectors, k = 5):
-        all_vectors = np.vstack([spam_vectors, ham_vectors])
-        labels = np.array(["spam"] * len(spam_vectors) + ["ham"] * len(ham_vectors))
+          def email_to_vector(email_text: str):
+          return model.encode(email_text, normalize_embeddings=True)
 
-        sims = cosine_similarity(email_vec.reshape(1, -1), all_vectors).ravel()
-        top_k_idx = np.argsort(sims)[-k:]; top_k_labels = labels[top_k_idx]
+          def k_nearest_majority_vote(email_vec, spam_vectors, ham_vectors, k = 5):
+          all_vectors = np.vstack([spam_vectors, ham_vectors])
+          labels = np.array(["spam"] * len(spam_vectors) + ["ham"] * len(ham_vectors))
 
-        pred = max(set(top_k_labels), key=list(top_k_labels).count); return pred
-    ```,
-    caption: align(left, [
-      Email spam classifier using k-NN algorithm. The `email_to_vector` function converts email text into a 384-dimensional semantic embedding using a pretrained transformer model. The `k_nearest_majority_vote` function classifies an email by
+          sims = cosine_similarity(email_vec.reshape(1, -1), all_vectors).ravel()
+          top_k_idx = np.argsort(sims)[-k:]; top_k_labels = labels[top_k_idx]
 
-      + Combining all known spam and ham embeddings
-      + Computing cosine similarity between the input email and all training examples
-      + Selecting the k=5 most similar emails
-      + Predicting the class by majority vote among these neighbors
-    ]),
-  ),
+          pred = max(set(top_k_labels), key=list(top_k_labels).count); return pred
+          ```
+        ],
+      ),
+      caption: align(left, [
+        Email spam classifier using k-NN algorithm. The `email_to_vector` function converts email text into a 384-dimensional semantic embedding using a pretrained transformer model. The `k_nearest_majority_vote` function classifies an email by
+
+        + Combining all known spam and ham embeddings
+        + Computing cosine similarity between the input email and all training examples
+        + Selecting the k=5 most similar emails
+        + Predicting the class by majority vote among these neighbors
+      ]),
+    )
+  ],
 )
+<<<<<<< HEAD
 
 The disadvantages of embeddings are that the actual classification can take a while, and it requires often holding a large embedding model in memory in order to be able to actually vectorize emails. However, it probably does not matter very much how fast classifications actually are, since email is inherently async. When a user receives an email, we could use our embedding algorithm to classify it before it gets to their mailbox, and it would likely be in the worst case only a few extra seconds of work. Additionally, embeddings are language specific, and we would need to have a different model for different languages, and may run into issues if the same user is bilingual and receives emails in multiple languages.
 
 #bibliography("sources.bib")
+=======
+>>>>>>> main
